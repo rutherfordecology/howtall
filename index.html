@@ -125,6 +125,7 @@ dialog::backdrop { background: rgba(0,0,0,0.45); }
 /* Map marks */
 .tree-label { background: var(--pin); color: #fff; font: 700 12px var(--font); padding: 1px 5px; white-space: nowrap; box-shadow: 0 1px 3px rgba(0,0,0,0.4); border: 0; }
 .tree-label.other { background: rgba(10,63,38,0.9); font-weight: 600; }
+.tree-label.picked { background: #fff; color: #111; font-size: 13px; }
 .tree-label::before { display: none; }
 .leaflet-tooltip.tree-label { border-radius: 0; }
 .leaflet-control-attribution { font-size: 10px; }
@@ -190,7 +191,7 @@ dialog::backdrop { background: rgba(0,0,0,0.45); }
     <h2>howtall</h2>
     <p>Tap a tree and howtall tells you how tall it is, from the LiDAR survey Toitū Te Whenua LINZ flew over that spot. New Zealand only, wherever LINZ has a 1 m surface model.</p>
     <h3>What a tap gives you</h3>
-    <p>A tap reads a circle round the spot; the slider sets its radius, 10 to 100 m (up to about 3 ha). You get the tallest tree in the circle, the tree you tapped (the highest point within 3 m of the tap, since a crown's top is rarely exactly where a finger lands), the five tallest tree tops, how much of the circle is over 2 m, and the average height of that cover. The tallest tree is marked pink on the map, the other tall tops green.</p>
+    <p>A tap reads a circle round the spot; the slider sets its radius, 10 to 100 m (up to about 3 ha). You get the tallest tree in the circle, the tree you tapped (the highest point within 3 m of the tap, since a crown's top is rarely exactly where a finger lands), the five tallest tree tops, how much of the circle is over 2 m, and the average height of that cover. The tallest tree is marked pink on the map, the other tall tops green. Every other tree top over 5 m gets a small dot: tap one to see its height.</p>
     <p>The <strong>target button</strong> on the map uses your phone's location; Location (GPS) needs to be on in the phone's settings. Under a forest canopy GPS is often out by 5 to 20 m, so the circle is widened to at least your GPS accuracy.</p>
     <h3>Aerial and Ground</h3>
     <p><strong>Aerial</strong> shows the photo with tree heights coloured over it. <strong>Ground</strong> takes away the photo and the trees: inside the circle it shows the bare earth from the LiDAR's ground model at 1 m, shaded as if lit from the north-west, so tracks, streams, slips and old earthworks under the canopy show up. Outside the circle is Esri's much coarser world hillshade, for context.</p>
@@ -210,7 +211,7 @@ dialog::backdrop { background: rgba(0,0,0,0.45); }
 <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
 <script src="icons.js"></script>
 <script>
-const VERSION = '0.4.0';
+const VERSION = '0.5.0';
 document.getElementById('ver').textContent = 'v' + VERSION;
 document.getElementById('aboutVer').textContent = 'Version ' + VERSION;
 
@@ -482,13 +483,20 @@ function circleStats(p, cx, cy, rad) {
     if (isTop) peaks.push(i);
   }
   peaks.sort((a, b) => h[b] - h[a]);
-  const tops = [];
-  for (const i of peaks) {
-    const [x, y] = cellXY(p, i);
-    if (tops.every(j => { const [u, w] = cellXY(p, j); return (u - x) ** 2 + (w - y) ** 2 >= 36; })) tops.push(i);
-    if (tops.length >= 5) break;
-  }
-  return { n, nData, over2, mean2: over2 ? sum2 / over2 : NaN, top, tops };
+  // Tops kept at least `sep` m apart, tallest first: 6 m for the five
+  // labelled ones, 3 m for every tree's dot (two tops of one broad crown
+  // closer than that count as one tree).
+  const spaced = (sep, minH, max) => {
+    const out = [];
+    for (const i of peaks) {
+      if (h[i] < minH) break;
+      const [x, y] = cellXY(p, i);
+      if (out.every(j => { const [u, w] = cellXY(p, j); return (u - x) ** 2 + (w - y) ** 2 >= sep * sep; })) out.push(i);
+      if (out.length >= max) break;
+    }
+    return out;
+  };
+  return { n, nData, over2, mean2: over2 ? sum2 / over2 : NaN, top, tops: spaced(6, 3, 5), trees: spaced(3, 5, 600) };
 }
 
 /* ---------- map ---------- */
@@ -714,6 +722,7 @@ async function measure(lon, lat, kind, acc) {
   last = { lon, lat, kind, acc };
   marks.clearLayers();
   if (topMarks) { map.removeLayer(topMarks); topMarks = null; }
+  map.closeTooltip(tapTip);
   lastTops = null;
   if (lon < NZ_BBOX[0] || lon > NZ_BBOX[2] || lat < NZ_BBOX[1] || lat > NZ_BBOX[3]) {
     setStatus('No LiDAR here. howtall uses LINZ\'s LiDAR, which covers New Zealand only.', true); return;
@@ -752,10 +761,21 @@ async function measure(lon, lat, kind, acc) {
 // (green). A label that would sit on top of one already placed is left
 // off at this zoom, so only its dot shows; zooming in redraws them.
 let topMarks = null, lastTops = null;
-function drawTops(p, main, others) {
-  lastTops = [p, main, others];
+// Every tree's dot is on a canvas with a wide tap tolerance, so a finger
+// finds it; a tap shows that tree's height and doesn't start a new circle.
+const dotRenderer = L.canvas({ padding: 0.5, tolerance: 12 });
+const tapTip = L.tooltip({ permanent: true, direction: 'top', offset: [0, -5], className: 'tree-label picked' });
+function drawTops(p, main, others, trees) {
+  lastTops = [p, main, others, trees];
   if (topMarks) map.removeLayer(topMarks);
   topMarks = L.layerGroup().addTo(map);
+  const shown = new Set([main, ...others]);
+  (trees || []).filter(i => !shown.has(i)).forEach(i => {
+    const [u, w] = cellXY(p, i), at = ll(u, w);
+    L.circleMarker(at, { renderer: dotRenderer, radius: 3.5, color: '#fff', weight: 1.5, fillColor: '#0a3f26', fillOpacity: 0.9, bubblingMouseEvents: false })
+      .on('click', () => { tapTip.setLatLng(at).setContent(fmtM(p.h[i]) + ' m'); map.openTooltip(tapTip); })
+      .addTo(topMarks);
+  });
   const placed = [];
   const add = (i, isMain) => {
     const [u, w] = cellXY(p, i), at = ll(u, w), pt = map.latLngToContainerPoint(at);
@@ -779,7 +799,7 @@ function show(p, surveys, x, y, kind, reach) {
   const main = st.top;
   L.circle(ll(x, y), { radius: reach, color: '#fff', weight: 1.5, dashArray: '4 4', fill: false, interactive: false }).addTo(marks);
   const tops = st.tops.filter(i => h[i] >= 5);
-  drawTops(p, main >= 0 && h[main] >= 0.5 ? main : -1, tops.filter(i => i !== main).slice(0, 4));
+  drawTops(p, main >= 0 && h[main] >= 0.5 ? main : -1, tops.filter(i => i !== main).slice(0, 4), st.trees);
 
   const top = main >= 0 ? h[main] : NaN;
   const what = kind === 'gps' ? 'Tallest tree within ' + reach + ' m of you' : 'Tallest tree within ' + reach + ' m of the tap';

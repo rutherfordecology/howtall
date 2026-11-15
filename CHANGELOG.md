@@ -1,5 +1,9 @@
 # Changelog
 
+## 0.5.0 — 2026-11-15
+
+- Every tree top over 5 m in the circle now has a small dot (tops at least 3 m apart, so one broad crown counts once). Tap a dot to see that tree's height; tapping a dot doesn't start a new circle, and the dots have a wide tap area for fingers.
+
 ## 0.4.0 — 2026-11-15
 
 - Where I am is now a small target button on the map, above the zoom buttons, instead of a full-width bar.
