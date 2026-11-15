@@ -1,5 +1,14 @@
 # Changelog
 
+## 0.10.0 — 2026-11-15
+
+- Tidier panel; on a phone it's about a fifth shorter, so more map shows.
+- About is at the bottom, on the same line as Buy me a coffee. The map buttons (Aerial, Ground, Topo) now fit beside the logo on one row.
+- The tallest-tree figure is smaller.
+- Average height is gone.
+- The LiDAR is one line: when it was flown and whose it is (for example "LiDAR 2019–2022 · © BOPLASS · CC BY 4.0").
+- Only the newest survey is shown; the buttons for older surveys are gone. An older survey is still used where the newest stops short of the spot.
+
 ## 0.9.0 — 2026-11-15
 
 - Topo is now LINZ's NZ Topo50 map from zoom 12 in (from the LINZ Data Service, CC BY 4.0), with OpenTopoMap further out, where a 1:50,000 map shrunk down can't be read. Topo50 is drawn for 1:50,000, so close in it's enlarged.

@@ -45,7 +45,8 @@ body { font-family: var(--font); background: var(--bg); color: var(--text); font
 .brand-by { display: flex; align-items: center; gap: 3px; border: 0; background: none; color: rgba(255,255,255,0.85); font: 300 12px var(--font); padding: 2px 0 0; cursor: pointer; }
 .brand-by strong { font-weight: 700; }
 .brand-by em { font-style: normal; font-weight: 300; }
-.foot { text-align: center; padding: 8px 0 0; }
+.foot { display: flex; justify-content: center; gap: 8px; padding: 6px 0 0; }
+button.bmc { border: 0; background: none; font-family: var(--font); cursor: pointer; }
 .bmc { display: inline-flex; align-items: center; gap: 6px; color: var(--grey); font-size: 13px; font-weight: 500; text-decoration: none; padding: 4px 8px; }
 .bmc:hover, .bmc:active { color: var(--text); }
 .icon-btn { display: grid; place-items: center; }
@@ -72,16 +73,14 @@ body { font-family: var(--font); background: var(--bg); color: var(--text); font
 .result:empty { display: none; }
 .hint { color: var(--grey); font-size: 14px; line-height: 1.35; padding: 2px 0 8px; }
 .big { display: flex; align-items: baseline; gap: 8px; }
-.big .num { font-size: 44px; font-weight: 700; letter-spacing: -0.02em; line-height: 1; }
-.big .unit { font-size: 20px; font-weight: 600; }
+.big .num { font-size: 32px; font-weight: 700; letter-spacing: -0.02em; line-height: 1; }
+.big .unit { font-size: 16px; font-weight: 600; }
 .big .what { color: var(--grey); font-size: 13px; line-height: 1.25; }
 .lines { margin: 8px 0 4px; display: grid; grid-template-columns: auto 1fr; gap: 3px 12px; font-size: 14px; }
 .lines dt { color: var(--grey); }
 .lines dd { font-weight: 500; font-variant-numeric: tabular-nums; }
+.survey.one { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 .survey { font-size: 12.5px; color: var(--grey); margin: 6px 0 2px; line-height: 1.35; }
-.chips { display: flex; flex-wrap: wrap; gap: 6px; margin: 4px 0 6px; }
-.chip { border: 1px solid var(--rule); background: var(--bg); color: var(--text); font: 500 13px var(--font); padding: 5px 9px; cursor: pointer; }
-.chip.on { background: var(--base); border-color: var(--base); color: #fff; }
 .status { font-size: 14px; padding: 4px 0 8px; color: var(--grey); }
 .status.err { color: #b3261e; }
 .spin { display: inline-block; width: 12px; height: 12px; border: 2px solid var(--rule); border-top-color: var(--base); border-radius: 50%; animation: s 0.8s linear infinite; vertical-align: -1px; margin-right: 6px; }
@@ -101,8 +100,7 @@ body { font-family: var(--font); background: var(--bg); color: var(--text); font
 .top-right { display: flex; gap: 8px; align-items: center; pointer-events: auto; }
 .look { background: var(--bg); box-shadow: 0 1px 4px rgba(0,0,0,0.3); }
 .look button { min-height: 38px; padding: 0 12px; }
-/* On a phone the three map buttons go under the ? button, so the header fits. */
-@media (max-width: 440px) { .top-right { flex-direction: column-reverse; align-items: flex-end; } }
+
 #map.ground { background: #e9e7e2; }
 .legend .ramp.grey { background: linear-gradient(90deg, #282828, #f5f5f5); }
 .legend .ticks span:only-child { white-space: normal; }
@@ -148,7 +146,6 @@ dialog::backdrop { background: rgba(0,0,0,0.45); }
       <button type="button" role="radio" data-look="ground" aria-checked="false">Ground</button>
       <button type="button" role="radio" data-look="topo" aria-checked="false">Topo</button>
     </div>
-    <button class="icon-btn" id="aboutBtn" type="button" aria-label="About howtall"><span data-icon="info" data-icon-size="20"></span></button>
   </div>
 </div>
 
@@ -159,7 +156,7 @@ dialog::backdrop { background: rgba(0,0,0,0.45); }
     <input type="range" id="radius" min="10" max="100" step="5" value="25">
     <output id="radiusOut" for="radius"></output>
   </div>
-  <div class="foot"><a class="bmc" href="https://buymeacoffee.com/rutherfordecology" target="_blank" rel="noopener"><span data-icon="coffee" data-icon-size="15"></span>Buy me a coffee</a></div>
+  <div class="foot"><button class="bmc" id="aboutBtn" type="button" aria-haspopup="dialog"><span data-icon="info" data-icon-size="15"></span>About</button><a class="bmc" href="https://buymeacoffee.com/rutherfordecology" target="_blank" rel="noopener"><span data-icon="coffee" data-icon-size="15"></span>Buy me a coffee</a></div>
 </div>
 
 <dialog id="re" class="re">
@@ -194,13 +191,13 @@ dialog::backdrop { background: rgba(0,0,0,0.45); }
     <h2>howtall</h2>
     <p>Tap a tree and howtall tells you how tall it is, from the LiDAR survey of that spot, published by Toitū Te Whenua LINZ. New Zealand only, wherever LINZ has a 1 m surface model.</p>
     <h3>What a tap gives you</h3>
-    <p>A tap reads a circle round the spot; the slider sets its radius, 10 to 100 m (up to about 3 ha). You get the tallest tree in the circle, the tree you tapped (the highest point within 3 m of the tap, since a crown's top is rarely exactly where a finger lands), the five tallest tree tops, how much of the circle is over 2 m, and the average height of that cover. The tallest tree is marked pink on the map, the other tall tops green. Every other tree over 5 m gets a small dot: tap one to see its height. Two tops count as separate trees only if the canopy dips between them by at least 2 m, or a quarter of the shorter tree's height, so the bumps on one broad crown get one dot.</p>
+    <p>A tap reads a circle round the spot; the slider sets its radius, 10 to 100 m (up to about 3 ha). You get the tallest tree in the circle, the tree you tapped (the highest point within 3 m of the tap, since a crown's top is rarely exactly where a finger lands), the five tallest tree tops, and how much of the circle is over 2 m. The tallest tree is marked pink on the map, the other tall tops green. Every other tree over 5 m gets a small dot: tap one to see its height. Two tops count as separate trees only if the canopy dips between them by at least 2 m, or a quarter of the shorter tree's height, so the bumps on one broad crown get one dot.</p>
     <p>The <strong>target button</strong> on the map uses your phone's location; Location (GPS) needs to be on in the phone's settings. Under a forest canopy GPS is often out by 5 to 20 m, so the circle is widened to at least your GPS accuracy.</p>
-    <h3>Aerial and Ground</h3>
+    <h3>Aerial, Ground and Topo</h3>
     <p><strong>Aerial</strong> shows the photo with tree heights coloured over it. <strong>Ground</strong> takes away the photo and the trees: inside the circle it shows the bare earth from the LiDAR's ground model at 1 m, shaded as if lit from the north-west, so tracks, streams, slips and old earthworks under the canopy show up. Outside the circle is Esri's much coarser world hillshade, for context. <strong>Topo</strong> is LINZ's NZ Topo50 map (contours, tracks, huts) with the tree heights coloured over it; zoomed well out it's OpenTopoMap.</p>
     <h3>How heights are worked out</h3>
     <p>Height is the surface model (the top of everything) minus the ground model (the bare earth under it), both from the same flight, on a 1 m grid. Things that are clearly power lines or pylons are left out: a cell far above everything round it and too narrow to be a crown. Buildings are not left out, so a tap on a roof gives the roof.</p>
-    <p>The 1 m grid can clip the very tip of a narrow, pointed crown (a young conifer, a cabbage tree), so the true top may be a metre or two higher. Heights are for the date the survey was flown; a tree may have grown since. When more than one survey covers the spot, the newest is shown first and the others are buttons under the result.</p>
+    <p>The 1 m grid can clip the very tip of a narrow, pointed crown (a young conifer, a cabbage tree), so the true top may be a metre or two higher. Heights are for the date the survey was flown; a tree may have grown since. When more than one survey covers the spot, the newest is used; the line under the result says when it was flown and whose it is.</p>
     <h3>Data used</h3>
     <p>Nothing is downloaded until you tap. Then howtall reads just the 1 m cells around the spot from LINZ's Cloud-Optimised GeoTIFFs, in blocks of 512 × 512 m: about 0.75 MB a tap for a small circle, up to about 3 MB for a 100 m circle that crosses block edges. Blocks are kept, so tapping again nearby downloads nothing.</p>
     <h3>Sources</h3>
@@ -214,7 +211,7 @@ dialog::backdrop { background: rgba(0,0,0,0.45); }
 <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
 <script src="icons.js"></script>
 <script>
-const VERSION = '0.9.0';
+const VERSION = '0.10.0';
 document.getElementById('ver').textContent = 'v' + VERSION;
 document.getElementById('aboutVer').textContent = 'Version ' + VERSION;
 
@@ -728,7 +725,6 @@ function setStatus(msg, err) {
 }
 
 let last = null;        // the last measurement asked for: { lon, lat, kind: 'tap' | 'gps', acc }
-let pickedSurvey = null; // a survey picked from the chips, kept while it covers the spot
 let runId = 0;
 setLook(look);
 
@@ -815,9 +811,9 @@ async function measure(lon, lat, kind, acc) {
     const surveys = await surveysAt(lon, lat, x, y);
     if (id !== runId) return;
     if (!surveys.length) { setStatus('No LINZ LiDAR survey covers this spot yet.', true); return; }
-    // The picked survey if it's still here, else the newest with data at the point.
-    let order = surveys.slice();
-    if (pickedSurvey && surveys.some(s => s.id === pickedSurvey)) order = [surveys.find(s => s.id === pickedSurvey), ...surveys.filter(s => s.id !== pickedSurvey)];
+    // The newest survey with data at the point (an older one only where the
+    // newest stops short of the spot).
+    const order = surveys;
     let p = null;
     for (const s of order) {
       setStatus('Reading heights from ' + s.name + '…');
@@ -888,31 +884,23 @@ function show(p, surveys, x, y, kind, reach) {
     '<dt>' + (kind === 'gps' ? 'Tree at your position' : 'Tree you tapped') + '</dt><dd>' + (tapTop >= 2 ? fmtM(tapTop) + ' m' : 'none (' + fmtM(here) + ' m)') + '</dd>' +
     (tops.length > 1 ? '<dt>Tallest tree tops</dt><dd>' + tops.map(i => fmtM(h[i], 0)).join(', ') + ' m</dd>' : '') +
     '<dt>Cover over 2 m</dt><dd>' + (st.nData ? Math.round(100 * st.over2 / st.nData) + '% of the circle' : '–') + '</dd>' +
-    (st.over2 ? '<dt>Its average height</dt><dd>' + fmtM(st.mean2) + ' m</dd>' : '') +
     '<dt>Ground</dt><dd>' + fmtM(ground, 0) + ' m above sea level</dd></dl>';
   if (kind === 'gps' && last && last.acc > radius) html += '<div class="survey">The circle is ' + reach + ' m because your GPS may be out by about ' + Math.round(last.acc) + ' m.</div>';
   if (st.nData < st.n * 0.9) html += '<div class="survey">' + Math.round(100 * (1 - st.nData / st.n)) + '% of the circle has no LiDAR height: the edge of the survey, water, or power lines left out.</div>';
   html += '<div class="legend">' + legendHtml() + '</div>';
-  html += '<div class="survey">LiDAR flown ' + (p.survey.from && p.survey.to && p.survey.from !== p.survey.to ? p.survey.from + '–' + p.survey.to : p.survey.to || '') + ' · ' + esc(p.survey.name) + (p.nWires >= 15 ? ' · power lines left out' : '') + '<br><span id="lic">LiDAR © the survey’s licensor, CC BY 4.0, via Toitū Te Whenua LINZ</span></div>';
-  if (surveys.length > 1) {
-    html += '<div class="chips" role="radiogroup" aria-label="Survey">' + surveys.map(s =>
-      '<button class="chip' + (s.id === p.survey.id ? ' on' : '') + '" type="button" role="radio" aria-checked="' + (s.id === p.survey.id) + '" data-id="' + esc(s.id) + '">' +
-      (s.from && s.from !== s.to ? s.from + '–' + s.to : s.to || s.name) + '</button>').join('') + '</div>';
-  }
+  // One line: when it was flown and whose it is (the full credit is on the map).
+  const flown = p.survey.from && p.survey.to && p.survey.from !== p.survey.to ? p.survey.from + '–' + p.survey.to : String(p.survey.to || '');
+  html += '<div class="survey one" title="' + esc(p.survey.name) + '">LiDAR ' + flown + ' · <span id="lic">' + esc(p.survey.name) + '</span> · CC BY 4.0' + (p.nWires >= 15 ? ' · power lines left out' : '') + '</div>';
   $('result').innerHTML = html;
   // Credit the survey's own licensor, in the panel and on the map.
   const survey = p.survey;
   licensors(survey).then(names => {
     if (!names || !lastTops || lastTops[0].survey !== survey) return;
     const t = 'LiDAR © ' + names.join(', ') + ', CC BY 4.0, via Toitū Te Whenua LINZ';
-    if ($('lic')) $('lic').textContent = t;
+    if ($('lic')) $('lic').textContent = '© ' + names.join(', ');
     setLidarCredit(t);
   });
   if (last) fitCircle(last.lat, last.lon, reach);
-  $('result').querySelectorAll('.chip').forEach(b => b.addEventListener('click', () => {
-    pickedSurvey = b.dataset.id;
-    if (last) measure(last.lon, last.lat, last.kind, last.acc);
-  }));
 }
 </script>
 </body>
