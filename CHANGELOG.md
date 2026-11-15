@@ -1,5 +1,12 @@
 # Changelog
 
+## 0.3.0 — 2026-11-15
+
+- Rutherford Ecology branding: "by Rutherford ecology" under the app name opens a menu with the Rutherford Ecology website and links to the other apps.
+- Buy me a coffee link at the bottom of the panel, and in the menu and About.
+- Icons from the shared Rutherford Ecology line set (occurd's icons.js), with new tree, mountain, shell and tail icons drawn in the same style.
+- Home-screen icon redrawn in the style of the other small apps.
+
 ## 0.2.0 — 2026-11-15
 
 - Tree and Area modes replaced by one: every tap reads a circle and reports the tallest tree in it, the tree you tapped (highest point within 3 m), the five tallest tops, cover over 2 m and its mean height.

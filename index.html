@@ -39,8 +39,30 @@ body { font-family: var(--font); background: var(--bg); color: var(--text); font
 
 /* Top bar */
 .top { position: fixed; top: 0; left: 0; right: 0; z-index: 1000; padding: calc(var(--safe-t) + 8px) 12px 8px; display: flex; align-items: center; justify-content: space-between; pointer-events: none; }
-.brand { pointer-events: auto; background: var(--base); color: #fff; padding: 7px 12px; font-weight: 700; font-size: 17px; letter-spacing: -0.01em; box-shadow: 0 1px 4px rgba(0,0,0,0.3); }
-.brand small { font-weight: 400; font-size: 11px; opacity: 0.75; margin-left: 6px; }
+.brand { pointer-events: auto; background: var(--base); color: #fff; padding: 6px 11px 5px; box-shadow: 0 1px 4px rgba(0,0,0,0.3); }
+.brand-name { display: flex; align-items: center; gap: 5px; font-weight: 700; font-size: 17px; letter-spacing: -0.01em; line-height: 1.1; }
+.brand-name small { font-weight: 400; font-size: 10.5px; opacity: 0.7; margin-left: 2px; }
+.brand-by { display: flex; align-items: center; gap: 3px; border: 0; background: none; color: rgba(255,255,255,0.85); font: 300 12px var(--font); padding: 2px 0 0; cursor: pointer; }
+.brand-by strong { font-weight: 700; }
+.brand-by em { font-style: normal; font-weight: 300; }
+.foot { text-align: center; padding: 8px 0 0; }
+.bmc { display: inline-flex; align-items: center; gap: 6px; color: var(--grey); font-size: 13px; font-weight: 500; text-decoration: none; padding: 4px 8px; }
+.bmc:hover, .bmc:active { color: var(--text); }
+.icon-btn { display: grid; place-items: center; }
+.re { width: min(440px, calc(100vw - 24px)); }
+.re-head { background: var(--base); color: #fff; padding: 18px 18px 12px; text-align: center; }
+.re-head img { width: 150px; max-width: 60%; height: auto; filter: brightness(0) invert(1); opacity: 0.8; display: block; margin: 0 auto 6px; }
+.re-word { font-size: 15px; } .re-word strong { font-weight: 700; } .re-word em { font-style: normal; font-weight: 300; }
+.re-body { padding: 12px 16px 4px; overflow-y: auto; max-height: calc(100dvh - 260px); }
+.re-body h3 { font-size: 13px; color: var(--grey); font-weight: 600; margin: 14px 0 6px; }
+.re-site { display: flex; justify-content: space-between; align-items: center; padding: 12px; border: 1px solid var(--rule); color: var(--text); text-decoration: none; font-weight: 600; }
+.apps { display: grid; gap: 0; }
+.apps a { display: grid; grid-template-columns: 24px 1fr; gap: 10px; align-items: center; padding: 9px 4px; border-bottom: 1px solid var(--rule); color: var(--text); text-decoration: none; }
+.apps a > span:first-child { color: var(--base); }
+@media (prefers-color-scheme: dark) { :root:not([data-theme="light"]) .apps a > span:first-child { color: #7fc79a; } }
+.apps b { display: block; font-weight: 600; font-size: 14px; }
+.apps small { display: block; color: var(--grey); font-size: 12.5px; line-height: 1.3; }
+.re-bmc { margin: 12px auto 4px; display: flex; justify-content: center; }
 .icon-btn { pointer-events: auto; width: 40px; height: 40px; border: 0; background: var(--bg); color: var(--text); font: 600 17px var(--font); box-shadow: 0 1px 4px rgba(0,0,0,0.3); cursor: pointer; }
 
 /* Bottom panel: result card above the controls */
@@ -111,13 +133,16 @@ dialog::backdrop { background: rgba(0,0,0,0.45); }
 <div id="map"></div>
 
 <div class="top">
-  <div class="brand">howtall<small id="ver"></small></div>
+  <div class="brand">
+    <div class="brand-name"><span data-icon="tree" data-icon-size="18"></span>howtall<small id="ver"></small></div>
+    <button class="brand-by" id="reBtn" type="button" aria-haspopup="dialog">by <strong>Rutherford</strong> <em>ecology</em><span data-icon="chevron-down" data-icon-size="13"></span></button>
+  </div>
   <div class="top-right">
     <div class="look seg" role="radiogroup" aria-label="Map">
       <button type="button" role="radio" data-look="aerial" class="on" aria-checked="true">Aerial</button>
       <button type="button" role="radio" data-look="ground" aria-checked="false">Ground</button>
     </div>
-    <button class="icon-btn" id="aboutBtn" type="button" aria-label="About howtall">?</button>
+    <button class="icon-btn" id="aboutBtn" type="button" aria-label="About howtall"><span data-icon="info" data-icon-size="20"></span></button>
   </div>
 </div>
 
@@ -125,7 +150,7 @@ dialog::backdrop { background: rgba(0,0,0,0.45); }
   <div class="result" id="result"><div class="hint">Tap a tree on the map to see how tall it is, or use <strong>Where I am</strong>. Only the ground right around the spot is downloaded.</div></div>
   <div class="controls">
     <button class="btn" id="locBtn" type="button">
-      <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" aria-hidden="true"><circle cx="12" cy="12" r="4"/><path d="M12 2v3M12 19v3M2 12h3M19 12h3"/></svg>
+      <span data-icon="crosshair" data-icon-size="18"></span>
       Where I am
     </button>
   </div>
@@ -134,7 +159,35 @@ dialog::backdrop { background: rgba(0,0,0,0.45); }
     <input type="range" id="radius" min="10" max="100" step="5" value="25">
     <output id="radiusOut" for="radius"></output>
   </div>
+  <div class="foot"><a class="bmc" href="https://buymeacoffee.com/rutherfordecology" target="_blank" rel="noopener"><span data-icon="coffee" data-icon-size="15"></span>Buy me a coffee</a></div>
 </div>
+
+<dialog id="re" class="re">
+  <div class="re-head">
+    <img src="logo.png" alt="Rutherford Ecology">
+    <div class="re-word"><strong>Rutherford</strong> <em>ecology</em></div>
+  </div>
+  <div class="re-body">
+    <a class="re-site" href="https://www.rutherfordecology.co.nz/" target="_blank" rel="noopener"><span>Rutherford Ecology website</span><span data-icon="external-link" data-icon-size="16"></span></a>
+    <h3>More apps</h3>
+    <div class="apps">
+      <a href="https://occurd.rutherfordecology.co.nz/" target="_blank" rel="noopener"><span data-icon="map-pin"></span><span><b>occurd.</b><small>Draw an area and pull every biodiversity record inside it.</small></span></a>
+      <a href="https://occurd.rutherfordecology.co.nz/but-is-it-threatened/" target="_blank" rel="noopener"><span data-icon="warning"></span><span><b>but is it threatened?</b><small>Paste a species list, get its NZ threat status back.</small></span></a>
+      <a href="https://rutherfordecology.github.io/inferrd/" target="_blank" rel="noopener"><span data-icon="leaf"></span><span><b>inferrd.</b><small>Is the vegetation in an area changing? Satellite trends.</small></span></a>
+      <a href="https://rutherfordecology.github.io/rightree/" target="_blank" rel="noopener"><span data-icon="tree"></span><span><b>Rightree</b><small>Which native species belong on a piece of land.</small></span></a>
+      <a href="https://occurd.rutherfordecology.co.nz/looklike/" target="_blank" rel="noopener"><span data-icon="camera"></span><span><b>LookLike</b><small>Flick through photos of a species list.</small></span></a>
+      <a href="https://occurd.rutherfordecology.co.nz/whatdat/" target="_blank" rel="noopener"><span data-icon="award"></span><span><b>WhatDat?</b><small>A photo ID quiz for any organism.</small></span></a>
+      <a href="https://rutherfordecology.github.io/WhatDatBird/" target="_blank" rel="noopener"><span data-icon="bird"></span><span><b>WhatDatBird?</b><small>A bird ID quiz.</small></span></a>
+      <a href="https://occurd.rutherfordecology.co.nz/nudis/" target="_blank" rel="noopener"><span data-icon="fish"></span><span><b>Nudis Near Me</b><small>The nudibranchs recorded near you.</small></span></a>
+      <a href="https://occurd.rutherfordecology.co.nz/lizards/" target="_blank" rel="noopener"><span data-icon="reptile"></span><span><b>Lizards Near Me</b><small>The lizards and geckos recorded near you.</small></span></a>
+      <a href="https://occurd.rutherfordecology.co.nz/oysters/" target="_blank" rel="noopener"><span data-icon="shell"></span><span><b>The World's Your Oysters</b><small>The oysters recorded near you, anywhere.</small></span></a>
+      <a href="https://occurd.rutherfordecology.co.nz/mermaids/" target="_blank" rel="noopener"><span data-icon="tail"></span><span><b>Mermaids Near Me</b><small>Everything near you mistaken for a mermaid.</small></span></a>
+      <a href="https://rutherfordecology.github.io/soundabouts/" target="_blank" rel="noopener"><span data-icon="volume"></span><span><b>Soundabouts</b><small>Guess the country or year from its music.</small></span></a>
+    </div>
+    <a class="bmc re-bmc" href="https://buymeacoffee.com/rutherfordecology" target="_blank" rel="noopener"><span data-icon="coffee" data-icon-size="16"></span>Buy me a coffee</a>
+  </div>
+  <div class="about-foot"><button class="btn" type="button" id="reClose">Close</button></div>
+</dialog>
 
 <dialog id="about">
   <div class="about">
@@ -151,15 +204,17 @@ dialog::backdrop { background: rgba(0,0,0,0.45); }
     <h3>Data used</h3>
     <p>Nothing is downloaded until you tap. Then howtall reads just the 1 m cells around the spot from LINZ's Cloud-Optimised GeoTIFFs, in blocks of 512 × 512 m: about 0.75 MB a tap for a small circle, up to about 3 MB for a 100 m circle that crosses block edges. Blocks are kept, so tapping again nearby downloads nothing.</p>
     <h3>Sources</h3>
-    <p>LiDAR: Toitū Te Whenua Land Information New Zealand, <a href="https://registry.opendata.aws/nz-elevation/" target="_blank" rel="noopener">nz-elevation</a>, CC BY 4.0. Imagery: Esri World Imagery. Built by Rutherford Ecology from the LiDAR tab of inferrd.</p>
+    <p>LiDAR: Toitū Te Whenua Land Information New Zealand, <a href="https://registry.opendata.aws/nz-elevation/" target="_blank" rel="noopener">nz-elevation</a>, CC BY 4.0. Imagery: Esri World Imagery. Built by <a href="https://www.rutherfordecology.co.nz/" target="_blank" rel="noopener">Rutherford Ecology</a> from the LiDAR tab of inferrd.</p>
+    <p>Useful? <a href="https://buymeacoffee.com/rutherfordecology" target="_blank" rel="noopener">Buy me a coffee</a>.</p>
     <p id="aboutVer" style="color:var(--grey);font-size:12px;"></p>
   </div>
   <div class="about-foot"><button class="btn" type="button" id="aboutClose">Close</button></div>
 </dialog>
 
 <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+<script src="icons.js"></script>
 <script>
-const VERSION = '0.2.0';
+const VERSION = '0.3.0';
 document.getElementById('ver').textContent = 'v' + VERSION;
 document.getElementById('aboutVer').textContent = 'Version ' + VERSION;
 
@@ -575,6 +630,10 @@ $('radius').addEventListener('change', () => { try { localStorage.setItem('howta
 document.querySelectorAll('.look button').forEach(b => b.addEventListener('click', () => setLook(b.dataset.look)));
 $('aboutBtn').addEventListener('click', () => $('about').showModal());
 $('aboutClose').addEventListener('click', () => $('about').close());
+$('reBtn').addEventListener('click', () => $('re').showModal());
+$('reClose').addEventListener('click', () => $('re').close());
+// A tap on the dimmed backdrop closes either dialog.
+['about', 're'].forEach(id => $(id).addEventListener('click', (e) => { if (e.target === $(id)) $(id).close(); }));
 function syncPanelHeight() { document.documentElement.style.setProperty('--panel-h', (window.innerWidth < 640 ? $('panel').offsetHeight : 0) + 'px'); }
 new ResizeObserver(syncPanelHeight).observe($('panel'));
 
