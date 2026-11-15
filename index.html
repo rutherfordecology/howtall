@@ -119,7 +119,8 @@ dialog::backdrop { background: rgba(0,0,0,0.45); }
 .about h3 { font-size: 14px; margin: 14px 0 4px; }
 .about p { margin-bottom: 8px; }
 .about a { color: inherit; }
-.welcome { margin-bottom: 0 !important; }
+.welcome { margin-bottom: 0 !important; font-size: 26px !important; line-height: 1.15; }
+.welcome-to { display: block; font-size: 15px; font-weight: 400; color: var(--grey); }
 .welcome-by { font-size: 14px; font-weight: 300; color: var(--grey); margin-bottom: 14px; }
 .welcome-by strong { font-weight: 700; }
 .caution-list { margin: 0 0 8px 18px; }
@@ -196,7 +197,7 @@ dialog::backdrop { background: rgba(0,0,0,0.45); }
 
 <dialog id="caution">
   <div class="about">
-    <h2 class="welcome">Welcome to HowTall?</h2>
+    <h2 class="welcome"><span class="welcome-to">Welcome to</span> HowTall?</h2>
     <div class="welcome-by">by <strong>Rutherford</strong> ecology</div>
     <h3>How accurate are these heights?</h3>
     <p>HowTall? reads heights straight from LINZ's LiDAR surveys. For most trees they're within about half a metre of a measured height, and often closer. They can be further out:</p>
@@ -239,7 +240,7 @@ dialog::backdrop { background: rgba(0,0,0,0.45); }
 <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
 <script src="icons.js"></script>
 <script>
-const VERSION = '0.14.0';
+const VERSION = '0.14.1';
 document.getElementById('ver').textContent = 'v' + VERSION;
 document.getElementById('aboutVer').textContent = 'Version ' + VERSION;
 

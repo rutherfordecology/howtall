@@ -1,5 +1,9 @@
 # Changelog
 
+## 0.14.1 — 2026-11-15
+
+- Opening box: "Welcome to" is small and grey on its own line, with "HowTall?" bigger under it.
+
 ## 0.14.0 — 2026-11-15
 
 - The app is named HowTall? everywhere it shows: header, page title, installed-app name, About, messages and README. The address and repo stay howtall.
