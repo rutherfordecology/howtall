@@ -74,6 +74,12 @@ body { font-family: var(--font); background: var(--bg); color: var(--text); font
 .btn:active { background: var(--base-2); }
 .btn:disabled { opacity: 0.5; }
 .seg { display: flex; border: 1px solid var(--base); }
+.top-right { display: flex; gap: 8px; align-items: center; pointer-events: auto; }
+.look { background: var(--bg); box-shadow: 0 1px 4px rgba(0,0,0,0.3); }
+.look button { min-height: 38px; padding: 0 12px; }
+#map.ground { background: #e9e7e2; }
+.legend .ramp.grey { background: linear-gradient(90deg, #282828, #f5f5f5); }
+.legend .ticks span:only-child { white-space: normal; }
 .seg button { border: 0; background: var(--bg); color: var(--text); font: 600 14px var(--font); padding: 0 14px; min-height: 44px; cursor: pointer; }
 .seg button.on { background: var(--base); color: #fff; }
 .radius { display: none; align-items: center; gap: 10px; padding: 10px 0 0; font-size: 14px; }
@@ -106,7 +112,13 @@ dialog::backdrop { background: rgba(0,0,0,0.45); }
 
 <div class="top">
   <div class="brand">howtall<small id="ver"></small></div>
-  <button class="icon-btn" id="aboutBtn" type="button" aria-label="About howtall">?</button>
+  <div class="top-right">
+    <div class="look seg" role="radiogroup" aria-label="Map">
+      <button type="button" role="radio" data-look="aerial" class="on" aria-checked="true">Aerial</button>
+      <button type="button" role="radio" data-look="ground" aria-checked="false">Ground</button>
+    </div>
+    <button class="icon-btn" id="aboutBtn" type="button" aria-label="About howtall">?</button>
+  </div>
 </div>
 
 <div class="panel" id="panel">
@@ -116,14 +128,10 @@ dialog::backdrop { background: rgba(0,0,0,0.45); }
       <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" aria-hidden="true"><circle cx="12" cy="12" r="4"/><path d="M12 2v3M12 19v3M2 12h3M19 12h3"/></svg>
       Where I am
     </button>
-    <div class="seg" role="radiogroup" aria-label="What a tap measures">
-      <button type="button" role="radio" data-mode="tree" class="on" aria-checked="true">Tree</button>
-      <button type="button" role="radio" data-mode="area" aria-checked="false">Area</button>
-    </div>
   </div>
-  <div class="radius" id="radiusRow">
+  <div class="radius show" id="radiusRow">
     <label for="radius">Circle</label>
-    <input type="range" id="radius" min="10" max="50" step="5" value="25">
+    <input type="range" id="radius" min="10" max="100" step="5" value="25">
     <output id="radiusOut" for="radius"></output>
   </div>
 </div>
@@ -132,15 +140,16 @@ dialog::backdrop { background: rgba(0,0,0,0.45); }
   <div class="about">
     <h2>howtall</h2>
     <p>Tap a tree and howtall tells you how tall it is, from the LiDAR survey Toitū Te Whenua LINZ flew over that spot. New Zealand only, wherever LINZ has a 1 m surface model.</p>
-    <h3>Tree and Area</h3>
-    <p><strong>Tree</strong> gives the top of the tree you tapped: the highest point within 3 m of your tap, since a crown's top is rarely exactly where a finger lands. It also lists the tallest trees close by, so you can tell which one you meant.</p>
-    <p><strong>Area</strong> reads a circle around the tap (10 to 50 m across the radius, so at most about 0.8 ha) and reports the tallest tree, the five tallest tree tops, how much of the circle is over 2 m, and the average height of that cover.</p>
-    <p><strong>Where I am</strong> uses your phone's location. Under a forest canopy GPS is often out by 5 to 20 m, so it reports the tallest tree within your GPS accuracy, and the height right at your reported position.</p>
+    <h3>What a tap gives you</h3>
+    <p>A tap reads a circle round the spot; the slider sets its radius, 10 to 100 m (up to about 3 ha). You get the tallest tree in the circle, the tree you tapped (the highest point within 3 m of the tap, since a crown's top is rarely exactly where a finger lands), the five tallest tree tops, how much of the circle is over 2 m, and the average height of that cover. The tallest tree is marked pink on the map, the other tall tops green.</p>
+    <p><strong>Where I am</strong> uses your phone's location. Under a forest canopy GPS is often out by 5 to 20 m, so the circle is widened to at least your GPS accuracy.</p>
+    <h3>Aerial and Ground</h3>
+    <p><strong>Aerial</strong> shows the photo with tree heights coloured over it. <strong>Ground</strong> takes away the photo and the trees: inside the circle it shows the bare earth from the LiDAR's ground model at 1 m, shaded as if lit from the north-west, so tracks, streams, slips and old earthworks under the canopy show up. Outside the circle is Esri's much coarser world hillshade, for context.</p>
     <h3>How heights are worked out</h3>
     <p>Height is the surface model (the top of everything) minus the ground model (the bare earth under it), both from the same flight, on a 1 m grid. Things that are clearly power lines or pylons are left out: a cell far above everything round it and too narrow to be a crown. Buildings are not left out, so a tap on a roof gives the roof.</p>
     <p>The 1 m grid can clip the very tip of a narrow, pointed crown (a young conifer, a cabbage tree), so the true top may be a metre or two higher. Heights are for the date the survey was flown; a tree may have grown since. When more than one survey covers the spot, the newest is shown first and the others are buttons under the result.</p>
     <h3>Data used</h3>
-    <p>Nothing is downloaded until you tap. Then howtall reads just the 1 m cells around the spot from LINZ's Cloud-Optimised GeoTIFFs, typically a few hundred kilobytes to a couple of megabytes a tap, and reuses what it already has if you tap again nearby.</p>
+    <p>Nothing is downloaded until you tap. Then howtall reads just the 1 m cells around the spot from LINZ's Cloud-Optimised GeoTIFFs, in blocks of 512 × 512 m: about 0.75 MB a tap for a small circle, up to about 3 MB for a 100 m circle that crosses block edges. Blocks are kept, so tapping again nearby downloads nothing.</p>
     <h3>Sources</h3>
     <p>LiDAR: Toitū Te Whenua Land Information New Zealand, <a href="https://registry.opendata.aws/nz-elevation/" target="_blank" rel="noopener">nz-elevation</a>, CC BY 4.0. Imagery: Esri World Imagery. Built by Rutherford Ecology from the LiDAR tab of inferrd.</p>
     <p id="aboutVer" style="color:var(--grey);font-size:12px;"></p>
@@ -150,7 +159,7 @@ dialog::backdrop { background: rgba(0,0,0,0.45); }
 
 <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
 <script>
-const VERSION = '0.1.0';
+const VERSION = '0.2.0';
 document.getElementById('ver').textContent = 'v' + VERSION;
 document.getElementById('aboutVer').textContent = 'Version ' + VERSION;
 
@@ -180,7 +189,6 @@ const SPIKE_M = 100;       // taller than any NZ tree: birds, wires, return erro
 const WIRE_CLOSE_M = 5;    // see wireCells()
 const WIRE_ABOVE_M = 10;
 const TREE_REACH_M = 3;    // a tree's top is the highest cell this close to the tap
-const TREE_VIEW_M = 15;    // Tree mode reads this far round the tap, for the neighbours
 const PAD_M = 6;           // extra read round the circle, for the wire test
 const CATALOG_KEY = 'howtall.catalog.v1', CATALOG_DAYS = 7;
 
@@ -434,10 +442,28 @@ function circleStats(p, cx, cy, rad) {
 
 /* ---------- map ---------- */
 const map = L.map('map', { zoomControl: false, maxZoom: 21, tap: true }).setView([-41.2, 173.5], 5);
-L.control.zoom({ position: 'topright' }).addTo(map);
-L.tileLayer('https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}', {
+L.control.zoom({ position: 'bottomright' }).addTo(map);
+// Two looks: Aerial (photo, heights coloured on top) and Ground (no photo,
+// no trees: the bare earth from the LiDAR's ground model, shaded grey,
+// over Esri's coarse world hillshade for the land round it).
+const baseAerial = L.tileLayer('https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}', {
   maxZoom: 21, maxNativeZoom: 19, attribution: 'Imagery © Esri · LiDAR © Toitū Te Whenua LINZ, CC BY 4.0'
-}).addTo(map);
+});
+const baseGround = L.tileLayer('https://server.arcgisonline.com/ArcGIS/rest/services/Elevation/World_Hillshade/MapServer/tile/{z}/{y}/{x}', {
+  maxZoom: 21, maxNativeZoom: 16, attribution: 'Hillshade © Esri · LiDAR © Toitū Te Whenua LINZ, CC BY 4.0'
+});
+let look = 'aerial';
+try { if (localStorage.getItem('howtall.look') === 'ground') look = 'ground'; } catch (e) {}
+function setLook(v) {
+  look = v;
+  try { localStorage.setItem('howtall.look', v); } catch (e) {}
+  map.removeLayer(look === 'ground' ? baseAerial : baseGround);
+  (look === 'ground' ? baseGround : baseAerial).addTo(map);
+  document.getElementById('map').classList.toggle('ground', look === 'ground');
+  document.querySelectorAll('.look button').forEach(b => { const on = b.dataset.look === look; b.classList.toggle('on', on); b.setAttribute('aria-checked', String(on)); });
+  if (lastDraw) drawPatch(...lastDraw);
+  syncLegend();
+}
 try {
   const v = JSON.parse(localStorage.getItem('howtall.view') || 'null');
   if (v) map.setView([v[0], v[1]], v[2]);
@@ -458,67 +484,115 @@ function rampRgb(v) {
   const t = Math.min(1, Math.max(0, (v - RAMP[j][0]) / (RAMP[j + 1][0] - RAMP[j][0])));
   return RAMP[j][1].map((a, q) => Math.round(a + (RAMP[j + 1][1][q] - a) * t));
 }
+// Bare-ground hillshade (Horn's method), light from the north-west at
+// 45°, 0–1, worked out once per patch.
+function hillshade(p) {
+  if (p.shade) return p.shade;
+  const { W, H } = p.g, z = p.dem, out = new Float32Array(W * H).fill(NaN);
+  const zen = Math.PI / 4, az = (360 - 315 + 90) * Math.PI / 180, cz = Math.cos(zen), sz = Math.sin(zen);
+  const at = (x, y, c) => { const v = z[Math.min(H - 1, Math.max(0, y)) * W + Math.min(W - 1, Math.max(0, x))]; return v === v ? v : c; };
+  for (let y = 0; y < H; y++) for (let x = 0; x < W; x++) {
+    const c = z[y * W + x];
+    if (c !== c) continue;
+    const a = at(x - 1, y - 1, c), b = at(x, y - 1, c), cc = at(x + 1, y - 1, c), d = at(x - 1, y, c), f = at(x + 1, y, c);
+    const gg = at(x - 1, y + 1, c), h = at(x, y + 1, c), i = at(x + 1, y + 1, c);
+    // ×2 vertical exaggeration, so tracks and small gullies on gentle ground show.
+    const dzdx = 2 * ((cc + 2 * f + i) - (a + 2 * d + gg)) / 8, dzdy = 2 * ((gg + 2 * h + i) - (a + 2 * b + cc)) / 8;
+    const slope = Math.atan(Math.hypot(dzdx, dzdy));
+    let aspect = Math.atan2(dzdy, -dzdx);
+    if (aspect < 0) aspect += 2 * Math.PI;
+    out[y * W + x] = Math.max(0, cz * Math.cos(slope) + sz * Math.sin(slope) * Math.cos(az - aspect));
+  }
+  return (p.shade = out);
+}
+
+let lastDraw = null, drawId = 0;
 function drawPatch(p, cx, cy, rad) {
-  if (overlay) { map.removeLayer(overlay); overlay = null; }
-  if (overlayUrl) { URL.revokeObjectURL(overlayUrl); overlayUrl = null; }
+  lastDraw = [p, cx, cy, rad];
+  const id = ++drawId;
   const b = [cx - rad, cy - rad, cx + rad, cy + rad];
   const corners = [[b[0], b[1]], [b[2], b[1]], [b[0], b[3]], [b[2], b[3]]].map(([x, y]) => toLonLat(x, y));
   const w = Math.min(...corners.map(c => c[0])), e = Math.max(...corners.map(c => c[0]));
   const s = Math.min(...corners.map(c => c[1])), n = Math.max(...corners.map(c => c[1]));
-  const k = 3; // 3 image pixels a metre, so cell edges stay crisp
+  // Up to 3 image pixels a metre so cell edges stay crisp, but no more
+  // than ~700 across, so a big circle stays quick on a phone.
+  const k = Math.max(1, Math.min(3, 700 / (2 * rad)));
   const PW = Math.ceil((b[2] - b[0]) * k), PH = Math.ceil((b[3] - b[1]) * k);
+  // Over a few hundred metres lon/lat to NZTM is linear to well under a
+  // centimetre, so the image's corners are projected and the rest
+  // interpolated, not every pixel projected.
+  const [nwx, nwy] = toNztm(w, n), [nex, ney] = toNztm(e, n), [swx, swy] = toNztm(w, s), [sex, sey] = toNztm(e, s);
+  const ground = look === 'ground', shade = ground ? hillshade(p) : null;
   const cv = document.createElement('canvas'); cv.width = PW; cv.height = PH;
   const ctx = cv.getContext('2d'), im = ctx.createImageData(PW, PH);
-  for (let r = 0; r < PH; r++) for (let c = 0; c < PW; c++) {
-    const [x, y] = toNztm(w + (e - w) * (c + 0.5) / PW, n - (n - s) * (r + 0.5) / PH);
-    if ((x - cx) ** 2 + (y - cy) ** 2 > rad * rad) continue;
-    const i = cellAt(p, x, y);
-    if (i < 0) continue;
-    const v = p.h[i], o = (r * PW + c) * 4;
-    if (v !== v) { im.data[o] = 120; im.data[o + 1] = 120; im.data[o + 2] = 120; im.data[o + 3] = 90; continue; }
-    if (v < 0.5) { im.data[o + 3] = 0; continue; }
-    const rgb = rampRgb(v);
-    im.data[o] = rgb[0]; im.data[o + 1] = rgb[1]; im.data[o + 2] = rgb[2]; im.data[o + 3] = 200;
+  for (let r = 0; r < PH; r++) {
+    const v = (r + 0.5) / PH;
+    const lx = nwx + (swx - nwx) * v, ly = nwy + (swy - nwy) * v, rx = nex + (sex - nex) * v, ry = ney + (sey - ney) * v;
+    for (let c = 0; c < PW; c++) {
+      const u = (c + 0.5) / PW, x = lx + (rx - lx) * u, y = ly + (ry - ly) * u;
+      if ((x - cx) ** 2 + (y - cy) ** 2 > rad * rad) continue;
+      const i = cellAt(p, x, y);
+      if (i < 0) continue;
+      const o = (r * PW + c) * 4;
+      if (ground) {
+        const t = shade[i];
+        if (t !== t) { im.data[o] = 200; im.data[o + 1] = 120; im.data[o + 2] = 120; im.data[o + 3] = 120; continue; }
+        const g = Math.round(20 + 235 * t);
+        im.data[o] = g; im.data[o + 1] = g; im.data[o + 2] = g; im.data[o + 3] = 255;
+        continue;
+      }
+      const hv = p.h[i];
+      if (hv !== hv) { im.data[o] = 120; im.data[o + 1] = 120; im.data[o + 2] = 120; im.data[o + 3] = 90; continue; }
+      if (hv < 0.5) { im.data[o + 3] = 0; continue; }
+      const rgb = rampRgb(hv);
+      im.data[o] = rgb[0]; im.data[o + 1] = rgb[1]; im.data[o + 2] = rgb[2]; im.data[o + 3] = 200;
+    }
   }
   ctx.putImageData(im, 0, 0);
   cv.toBlob(bl => {
+    if (id !== drawId) return; // a newer draw has started
+    if (overlay) map.removeLayer(overlay);
+    if (overlayUrl) URL.revokeObjectURL(overlayUrl);
     overlayUrl = URL.createObjectURL(bl);
-    overlay = L.imageOverlay(overlayUrl, [[s, w], [n, e]], { pane: 'heights', opacity: 0.85, interactive: false }).addTo(map);
+    overlay = L.imageOverlay(overlayUrl, [[s, w], [n, e]], { pane: 'heights', opacity: ground ? 1 : 0.85, interactive: false });
+    // Added in the middle of a zoom, an image lands in the wrong place.
+    const o = overlay;
+    if (map._animatingZoom) map.once('zoomend', () => { if (overlay === o) o.addTo(map); }); else o.addTo(map);
   });
 }
 const ll = (x, y) => { const q = toLonLat(x, y); return [q[1], q[0]]; };
 
 /* ---------- UI ---------- */
 const $ = (id) => document.getElementById(id);
-let mode = 'tree';
+const R_MIN = 10, R_MAX = 100;
 let radius = 25;
-try { const r = Number(localStorage.getItem('howtall.radius')); if (r >= 10 && r <= 50) radius = r; } catch (e) {}
+try { const r = Number(localStorage.getItem('howtall.radius')); if (r >= R_MIN && r <= R_MAX) radius = r; } catch (e) {}
 $('radius').value = radius;
 const radiusText = () => radius + ' m radius';
 $('radiusOut').textContent = radiusText();
 $('radius').addEventListener('input', (e) => { radius = Number(e.target.value); $('radiusOut').textContent = radiusText(); });
-$('radius').addEventListener('change', () => { try { localStorage.setItem('howtall.radius', radius); } catch (e) {} if (last && last.kind === 'area') measure(last.lon, last.lat, 'area'); });
-document.querySelectorAll('.seg button').forEach(b => b.addEventListener('click', () => {
-  mode = b.dataset.mode;
-  document.querySelectorAll('.seg button').forEach(x => { x.classList.toggle('on', x === b); x.setAttribute('aria-checked', String(x === b)); });
-  $('radiusRow').classList.toggle('show', mode === 'area');
-  syncPanelHeight();
-  if (last && last.kind !== 'gps') measure(last.lon, last.lat, mode);
-}));
+$('radius').addEventListener('change', () => { try { localStorage.setItem('howtall.radius', radius); } catch (e) {} if (last) measure(last.lon, last.lat, last.kind, last.acc); });
+document.querySelectorAll('.look button').forEach(b => b.addEventListener('click', () => setLook(b.dataset.look)));
 $('aboutBtn').addEventListener('click', () => $('about').showModal());
 $('aboutClose').addEventListener('click', () => $('about').close());
 function syncPanelHeight() { document.documentElement.style.setProperty('--panel-h', (window.innerWidth < 640 ? $('panel').offsetHeight : 0) + 'px'); }
 new ResizeObserver(syncPanelHeight).observe($('panel'));
 
+const legendHtml = () => look === 'ground'
+  ? '<div class="ramp grey"></div><div class="ticks"><span>Bare ground under the trees, shaded as if lit from the north-west</span></div>'
+  : '<div class="ramp"></div><div class="ticks"><span>0</span><span>10</span><span>20</span><span>30</span><span>40+ m</span></div>';
+function syncLegend() { const el = document.querySelector('#result .legend'); if (el) el.innerHTML = legendHtml(); }
+
 function setStatus(msg, err) {
   $('result').innerHTML = '<div class="status' + (err ? ' err' : '') + '">' + (err ? '' : '<span class="spin"></span>') + esc(msg) + '</div>';
 }
 
-let last = null;        // the last measurement asked for: { lon, lat, kind, acc }
+let last = null;        // the last measurement asked for: { lon, lat, kind: 'tap' | 'gps', acc }
 let pickedSurvey = null; // a survey picked from the chips, kept while it covers the spot
 let runId = 0;
+setLook(look);
 
-map.on('click', (e) => measure(e.latlng.lng, e.latlng.lat, mode));
+map.on('click', (e) => measure(e.latlng.lng, e.latlng.lat, 'tap'));
 
 $('locBtn').addEventListener('click', () => {
   if (!navigator.geolocation) { setStatus('This browser can\'t share its location.', true); return; }
@@ -535,16 +609,31 @@ $('locBtn').addEventListener('click', () => {
   { enableHighAccuracy: true, timeout: 20000, maximumAge: 10000 });
 });
 
+// Bring the whole circle into the part of the map the panel doesn't
+// cover, zooming in if it would be small. Run again once the result has
+// filled the panel, since that makes the panel taller.
+function fitCircle(lat, lon, reach) {
+  if (map._animatingZoom) { map.once('zoomend', () => fitCircle(lat, lon, reach)); return; }
+  const cb = L.latLng(lat, lon).toBounds(reach * 2.2), size = map.getSize();
+  const padTop = 64, padBottom = (window.innerWidth < 640 ? $('panel').offsetHeight : 0) + 12;
+  const nw = map.latLngToContainerPoint(cb.getNorthWest()), se = map.latLngToContainerPoint(cb.getSouthEast());
+  const fits = nw.x >= 8 && nw.y >= padTop && se.x <= size.x - 8 && se.y <= size.y - padBottom;
+  const tooSmall = se.x - nw.x < size.x * 0.35;
+  if (!fits || tooSmall) map.fitBounds(cb, { paddingTopLeft: [12, padTop], paddingBottomRight: [12, padBottom], maxZoom: 19, animate: false });
+}
+
 async function measure(lon, lat, kind, acc) {
   const id = ++runId;
   last = { lon, lat, kind, acc };
   marks.clearLayers();
+  if (topMarks) { map.removeLayer(topMarks); topMarks = null; }
+  lastTops = null;
   if (lon < NZ_BBOX[0] || lon > NZ_BBOX[2] || lat < NZ_BBOX[1] || lat > NZ_BBOX[3]) {
     setStatus('No LiDAR here. howtall uses LINZ\'s LiDAR, which covers New Zealand only.', true); return;
   }
-  const reach = kind === 'area' ? radius : kind === 'gps' ? Math.min(50, Math.max(10, Math.ceil(acc || 10))) : TREE_VIEW_M;
-  const zoomTo = kind === 'tree' ? 19 : reach > 30 ? 18 : 19;
-  if (map.getZoom() < 17 || !map.getBounds().contains([lat, lon])) map.setView([lat, lon], zoomTo);
+  // The circle; from GPS, at least as wide as the GPS could be out.
+  const reach = kind === 'gps' ? Math.min(R_MAX, Math.max(radius, Math.ceil(acc || 0))) : radius;
+  fitCircle(lat, lon, reach);
   L.circleMarker([lat, lon], { radius: 4, color: '#fff', weight: 2, fillColor: '#111', fillOpacity: 1, interactive: false }).addTo(marks);
   setStatus('Looking for LiDAR here…');
   try {
@@ -565,52 +654,59 @@ async function measure(lon, lat, kind, acc) {
       if (i >= 0 && q.dem[i] === q.dem[i]) { p = q; break; }
     }
     if (!p) { setStatus('The LiDAR stops just short of this spot (the edge of a survey).', true); return; }
-    show(p, surveys, x, y, kind, reach, acc);
+    show(p, surveys, x, y, kind, reach);
   } catch (err) {
     if (id !== runId) return;
     setStatus('Couldn\'t read the LiDAR: ' + err.message + '. Check the connection and tap again.', true);
   }
 }
 
-function show(p, surveys, x, y, kind, reach, acc) {
-  const h = p.h, i0 = cellAt(p, x, y), here = h[i0], ground = p.dem[i0];
-  const near = circleStats(p, x, y, kind === 'tree' ? TREE_REACH_M : reach);
-  const wide = kind === 'tree' ? circleStats(p, x, y, TREE_VIEW_M) : near;
-  drawPatch(p, x, y, reach);
-  // The marked tree: Tree mode, the top near the tap; otherwise the tallest.
-  const main = near.top;
-  const label = (i, cls, text) => {
-    const [u, w] = cellXY(p, i);
-    L.circleMarker(ll(u, w), { radius: cls ? 4 : 6, color: '#fff', weight: 2, fillColor: cls ? '#0a3f26' : '#ff1f9e', fillOpacity: 1, interactive: false })
-      .bindTooltip(text, { permanent: true, direction: 'top', offset: [0, -6], className: 'tree-label' + (cls ? ' ' + cls : '') }).addTo(marks);
+// The tallest tree (pink, always labelled) and the other tall tops
+// (green). A label that would sit on top of one already placed is left
+// off at this zoom, so only its dot shows; zooming in redraws them.
+let topMarks = null, lastTops = null;
+function drawTops(p, main, others) {
+  lastTops = [p, main, others];
+  if (topMarks) map.removeLayer(topMarks);
+  topMarks = L.layerGroup().addTo(map);
+  const placed = [];
+  const add = (i, isMain) => {
+    const [u, w] = cellXY(p, i), at = ll(u, w), pt = map.latLngToContainerPoint(at);
+    const m = L.circleMarker(at, { radius: isMain ? 6 : 4, color: '#fff', weight: 2, fillColor: isMain ? '#ff1f9e' : '#0a3f26', fillOpacity: 1, interactive: false });
+    if (isMain || placed.every(q => Math.abs(q.x - pt.x) > 56 || Math.abs(q.y - pt.y) > 24)) {
+      m.bindTooltip(fmtM(p.h[i], isMain ? 1 : 0) + ' m', { permanent: true, direction: 'top', offset: [0, -6], className: 'tree-label' + (isMain ? '' : ' other') });
+      placed.push(pt);
+    }
+    m.addTo(topMarks);
   };
-  L.circle(ll(x, y), { radius: reach, color: '#fff', weight: 1.5, dashArray: '4 4', fill: false, interactive: false }).addTo(marks);
-  const farFromMain = (i) => { if (main < 0) return true; const [u, w] = cellXY(p, i), [a, b] = cellXY(p, main); return (u - a) ** 2 + (w - b) ** 2 >= 36; };
-  wide.tops.filter(i => i !== main && h[i] >= 5 && farFromMain(i)).slice(0, kind === 'tree' ? 3 : 4).forEach(i => label(i, 'other', fmtM(h[i], 0) + ' m'));
-  if (main >= 0 && h[main] >= 0.5) label(main, '', fmtM(h[main]) + ' m');
+  if (main >= 0) add(main, true);
+  others.forEach(i => add(i, false));
+}
+map.on('zoomend', () => { if (lastTops && topMarks && map.hasLayer(topMarks)) drawTops(...lastTops); });
 
-  let html = '';
+function show(p, surveys, x, y, kind, reach) {
+  const h = p.h, i0 = cellAt(p, x, y), here = h[i0], ground = p.dem[i0];
+  const st = circleStats(p, x, y, reach);
+  const atTap = circleStats(p, x, y, TREE_REACH_M).top; // the top of the tree right at the spot
+  drawPatch(p, x, y, reach);
+  const main = st.top;
+  L.circle(ll(x, y), { radius: reach, color: '#fff', weight: 1.5, dashArray: '4 4', fill: false, interactive: false }).addTo(marks);
+  const tops = st.tops.filter(i => h[i] >= 5);
+  drawTops(p, main >= 0 && h[main] >= 0.5 ? main : -1, tops.filter(i => i !== main).slice(0, 4));
+
   const top = main >= 0 ? h[main] : NaN;
-  if (kind === 'tree') {
-    const low = !(top >= 2);
-    html += '<div class="big"><span class="num">' + fmtM(top) + '</span><span class="unit">m</span><span class="what">' +
-      (low ? 'Nothing tree-sized here: the tallest thing within ' + TREE_REACH_M + ' m of the tap' : 'Top of the tree you tapped: the highest point within ' + TREE_REACH_M + ' m') + '</span></div>';
-    html += '<dl class="lines"><dt>Right where you tapped</dt><dd>' + fmtM(here) + ' m</dd>' +
-      (wide.top >= 0 && wide.top !== main && h[wide.top] > top + 0.5 ? '<dt>Tallest within ' + TREE_VIEW_M + ' m</dt><dd>' + fmtM(h[wide.top]) + ' m</dd>' : '') +
-      '<dt>Ground</dt><dd>' + fmtM(ground, 0) + ' m above sea level</dd></dl>';
-  } else {
-    const what = kind === 'gps' ? 'Tallest tree within ' + reach + ' m of you: how far out your GPS may be' : 'Tallest tree within ' + reach + ' m of the tap';
-    html += '<div class="big"><span class="num">' + fmtM(top) + '</span><span class="unit">m</span><span class="what">' + esc(what) + '</span></div>';
-    const tops = near.tops.filter(i => h[i] >= 5);
-    html += '<dl class="lines">' +
-      (kind === 'gps' ? '<dt>Right at your position</dt><dd>' + fmtM(here) + ' m</dd>' : '') +
-      (tops.length > 1 ? '<dt>Tallest tree tops</dt><dd>' + tops.map(i => fmtM(h[i], 0)).join(', ') + ' m</dd>' : '') +
-      '<dt>Cover over 2 m</dt><dd>' + (near.nData ? Math.round(100 * near.over2 / near.nData) + '% of the circle' : '–') + '</dd>' +
-      (near.over2 ? '<dt>Its average height</dt><dd>' + fmtM(near.mean2) + ' m</dd>' : '') +
-      '<dt>Ground</dt><dd>' + fmtM(ground, 0) + ' m above sea level</dd></dl>';
-    if (near.nData < near.n * 0.9) html += '<div class="survey">' + Math.round(100 * (1 - near.nData / near.n)) + '% of the circle has no LiDAR height (grey): the edge of the survey, water, or power lines left out.</div>';
-  }
-  html += '<div class="legend"><div class="ramp"></div><div class="ticks"><span>0</span><span>10</span><span>20</span><span>30</span><span>40+ m</span></div></div>';
+  const what = kind === 'gps' ? 'Tallest tree within ' + reach + ' m of you' : 'Tallest tree within ' + reach + ' m of the tap';
+  const tapTop = atTap >= 0 ? h[atTap] : NaN;
+  let html = '<div class="big"><span class="num">' + fmtM(top) + '</span><span class="unit">m</span><span class="what">' + esc(top >= 2 ? what : 'Nothing tree-sized within ' + reach + ' m') + '</span></div>';
+  html += '<dl class="lines">' +
+    '<dt>' + (kind === 'gps' ? 'Tree at your position' : 'Tree you tapped') + '</dt><dd>' + (tapTop >= 2 ? fmtM(tapTop) + ' m' : 'none (' + fmtM(here) + ' m)') + '</dd>' +
+    (tops.length > 1 ? '<dt>Tallest tree tops</dt><dd>' + tops.map(i => fmtM(h[i], 0)).join(', ') + ' m</dd>' : '') +
+    '<dt>Cover over 2 m</dt><dd>' + (st.nData ? Math.round(100 * st.over2 / st.nData) + '% of the circle' : '–') + '</dd>' +
+    (st.over2 ? '<dt>Its average height</dt><dd>' + fmtM(st.mean2) + ' m</dd>' : '') +
+    '<dt>Ground</dt><dd>' + fmtM(ground, 0) + ' m above sea level</dd></dl>';
+  if (kind === 'gps' && last && last.acc > radius) html += '<div class="survey">The circle is ' + reach + ' m because your GPS may be out by about ' + Math.round(last.acc) + ' m.</div>';
+  if (st.nData < st.n * 0.9) html += '<div class="survey">' + Math.round(100 * (1 - st.nData / st.n)) + '% of the circle has no LiDAR height: the edge of the survey, water, or power lines left out.</div>';
+  html += '<div class="legend">' + legendHtml() + '</div>';
   html += '<div class="survey">LiDAR flown ' + (p.survey.from && p.survey.to && p.survey.from !== p.survey.to ? p.survey.from + '–' + p.survey.to : p.survey.to || '') + ' · ' + esc(p.survey.name) + (p.nWires >= 15 ? ' · power lines left out' : '') + '</div>';
   if (surveys.length > 1) {
     html += '<div class="chips" role="radiogroup" aria-label="Survey">' + surveys.map(s =>
@@ -618,6 +714,7 @@ function show(p, surveys, x, y, kind, reach, acc) {
       (s.from && s.from !== s.to ? s.from + '–' + s.to : s.to || s.name) + '</button>').join('') + '</div>';
   }
   $('result').innerHTML = html;
+  if (last) fitCircle(last.lat, last.lon, reach);
   $('result').querySelectorAll('.chip').forEach(b => b.addEventListener('click', () => {
     pickedSurvey = b.dataset.id;
     if (last) measure(last.lon, last.lat, last.kind, last.acc);

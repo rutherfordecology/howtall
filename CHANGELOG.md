@@ -1,5 +1,15 @@
 # Changelog
 
+## 0.2.0 — 2026-11-15
+
+- Tree and Area modes replaced by one: every tap reads a circle and reports the tallest tree in it, the tree you tapped (highest point within 3 m), the five tallest tops, cover over 2 m and its mean height.
+- Circle radius up to 100 m (about 3 ha, at most about 3 MB a tap), was 50 m.
+- New Ground view (Aerial | Ground, top right): no photo and no trees, just the bare earth from the LiDAR ground model at 1 m, hillshaded from the north-west with ×2 vertical exaggeration, over Esri's world hillshade outside the circle.
+- Heights image drawn about 100× faster (corners projected, the rest interpolated), so big circles stay quick on a phone.
+- The map now moves to fit the whole circle above the results panel.
+- Tree-top labels that would overlap are left off (dot only) until you zoom in.
+- Zoom buttons moved to bottom right.
+
 ## 0.1.0 — 2026-11-15
 
 - First version, split out of inferrd's LiDAR tab as a phone app.
