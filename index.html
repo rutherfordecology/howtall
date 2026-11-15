@@ -123,6 +123,7 @@ dialog::backdrop { background: rgba(0,0,0,0.45); }
 .welcome-to { display: block; font-size: 15px; font-weight: 400; color: var(--grey); }
 .welcome-by { font-size: 14px; font-weight: 300; color: var(--grey); margin-bottom: 14px; }
 .welcome-by strong { font-weight: 700; }
+#caution .about p, #caution .caution-list { font-size: 13px; line-height: 1.45; }
 .caution-list { margin: 0 0 8px 18px; }
 .caution-list li { margin-bottom: 3px; }
 .caution-foot { display: flex; align-items: center; justify-content: space-between; gap: 12px; }
@@ -240,7 +241,7 @@ dialog::backdrop { background: rgba(0,0,0,0.45); }
 <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
 <script src="icons.js"></script>
 <script>
-const VERSION = '0.14.1';
+const VERSION = '0.14.2';
 document.getElementById('ver').textContent = 'v' + VERSION;
 document.getElementById('aboutVer').textContent = 'Version ' + VERSION;
 

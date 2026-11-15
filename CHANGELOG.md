@@ -1,5 +1,9 @@
 # Changelog
 
+## 0.14.2 — 2026-11-15
+
+- Opening box: the body text is a size smaller (13 px, was 14 px).
+
 ## 0.14.1 — 2026-11-15
 
 - Opening box: "Welcome to" is small and grey on its own line, with "HowTall?" bigger under it.
