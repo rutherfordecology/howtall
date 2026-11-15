@@ -1,5 +1,11 @@
 # Changelog
 
+## 0.4.0 — 2026-11-15
+
+- Where I am is now a small target button on the map, above the zoom buttons, instead of a full-width bar.
+- Says clearly when the phone's Location (GPS) is off: an error from the phone now says to turn Location on, and if the phone gives no answer at all, a hint appears after 7 seconds (it gives up after 15).
+- A tap on the map while waiting for a location cancels the wait.
+
 ## 0.3.1 — 2026-11-15
 
 - New address: howtall.rutherfordecology.co.nz (the github.io address redirects).

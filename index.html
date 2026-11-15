@@ -90,8 +90,10 @@ body { font-family: var(--font); background: var(--bg); color: var(--text); font
 .legend .ramp { height: 8px; background: linear-gradient(90deg, #440154 0%, #3b528b 25%, #21918c 50%, #5ec962 75%, #fde725 100%); }
 .legend .ticks { display: flex; justify-content: space-between; font-size: 11px; color: var(--grey); margin-top: 2px; }
 
-.controls { display: flex; gap: 8px; align-items: stretch; border-top: 1px solid var(--rule); padding-top: 10px; margin-top: 4px; }
-.result:empty + .controls { border-top: 0; margin-top: 0; padding-top: 0; }
+.radius { border-top: 1px solid var(--rule); margin-top: 4px; }
+.loc-btn { width: 44px; height: 44px; border: 0; background: var(--base); color: #fff; display: grid; place-items: center; cursor: pointer; box-shadow: 0 1px 4px rgba(0,0,0,0.35); }
+.loc-btn.busy { background: var(--base-2); }
+.loc-btn.busy svg { animation: s 1.6s linear infinite; }
 .btn { flex: 1; min-height: 46px; border: 0; background: var(--base); color: #fff; font: 600 15px var(--font); cursor: pointer; display: flex; align-items: center; justify-content: center; gap: 6px; }
 .btn:active { background: var(--base-2); }
 .btn:disabled { opacity: 0.5; }
@@ -147,13 +149,7 @@ dialog::backdrop { background: rgba(0,0,0,0.45); }
 </div>
 
 <div class="panel" id="panel">
-  <div class="result" id="result"><div class="hint">Tap a tree on the map to see how tall it is, or use <strong>Where I am</strong>. Only the ground right around the spot is downloaded.</div></div>
-  <div class="controls">
-    <button class="btn" id="locBtn" type="button">
-      <span data-icon="crosshair" data-icon-size="18"></span>
-      Where I am
-    </button>
-  </div>
+  <div class="result" id="result"><div class="hint">Tap a tree on the map to see how tall it is, or press <span data-icon="crosshair" data-icon-size="15" style="vertical-align:-3px"></span> for where you are. Only the ground right around the spot is downloaded.</div></div>
   <div class="radius show" id="radiusRow">
     <label for="radius">Circle</label>
     <input type="range" id="radius" min="10" max="100" step="5" value="25">
@@ -195,7 +191,7 @@ dialog::backdrop { background: rgba(0,0,0,0.45); }
     <p>Tap a tree and howtall tells you how tall it is, from the LiDAR survey Toitū Te Whenua LINZ flew over that spot. New Zealand only, wherever LINZ has a 1 m surface model.</p>
     <h3>What a tap gives you</h3>
     <p>A tap reads a circle round the spot; the slider sets its radius, 10 to 100 m (up to about 3 ha). You get the tallest tree in the circle, the tree you tapped (the highest point within 3 m of the tap, since a crown's top is rarely exactly where a finger lands), the five tallest tree tops, how much of the circle is over 2 m, and the average height of that cover. The tallest tree is marked pink on the map, the other tall tops green.</p>
-    <p><strong>Where I am</strong> uses your phone's location. Under a forest canopy GPS is often out by 5 to 20 m, so the circle is widened to at least your GPS accuracy.</p>
+    <p>The <strong>target button</strong> on the map uses your phone's location; Location (GPS) needs to be on in the phone's settings. Under a forest canopy GPS is often out by 5 to 20 m, so the circle is widened to at least your GPS accuracy.</p>
     <h3>Aerial and Ground</h3>
     <p><strong>Aerial</strong> shows the photo with tree heights coloured over it. <strong>Ground</strong> takes away the photo and the trees: inside the circle it shows the bare earth from the LiDAR's ground model at 1 m, shaded as if lit from the north-west, so tracks, streams, slips and old earthworks under the canopy show up. Outside the circle is Esri's much coarser world hillshade, for context.</p>
     <h3>How heights are worked out</h3>
@@ -214,7 +210,7 @@ dialog::backdrop { background: rgba(0,0,0,0.45); }
 <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
 <script src="icons.js"></script>
 <script>
-const VERSION = '0.3.1';
+const VERSION = '0.4.0';
 document.getElementById('ver').textContent = 'v' + VERSION;
 document.getElementById('aboutVer').textContent = 'Version ' + VERSION;
 
@@ -653,10 +649,34 @@ setLook(look);
 
 map.on('click', (e) => measure(e.latlng.lng, e.latlng.lat, 'tap'));
 
-$('locBtn').addEventListener('click', () => {
-  if (!navigator.geolocation) { setStatus('This browser can\'t share its location.', true); return; }
+// Where I am: a target button on the map, above the zoom buttons.
+const LocControl = L.Control.extend({
+  onAdd() {
+    const b = L.DomUtil.create('button', 'loc-btn');
+    b.id = 'locBtn'; b.type = 'button'; b.title = 'Where I am'; b.setAttribute('aria-label', 'Where I am');
+    b.innerHTML = icon('crosshair', { size: 22 });
+    L.DomEvent.disableClickPropagation(b);
+    L.DomEvent.on(b, 'click', findMe);
+    return b;
+  }
+});
+new LocControl({ position: 'bottomright' }).addTo(map);
+
+// When the phone's own Location (GPS) is switched off, browsers don't
+// always say so: some return an error, some wait until the timeout. So
+// after a few seconds with nothing, say what the likely cause is.
+const LOC_OFF = 'Your phone didn\'t give a location. Check Location (GPS) is turned on in your phone\'s settings, then press the target again. Or just tap the map.';
+let locId = 0;
+function findMe() {
+  if (!navigator.geolocation) { setStatus('This browser can\'t share its location. Tap the map instead.', true); return; }
+  const id = ++locId, btn = $('locBtn');
+  btn.classList.add('busy');
   setStatus('Finding where you are…');
+  const slow = setTimeout(() => { if (id === locId) setStatus('Still waiting for your location… If Location (GPS) is off in your phone\'s settings, turn it on and press the target again.'); }, 7000);
+  const done = () => { clearTimeout(slow); btn.classList.remove('busy'); };
   navigator.geolocation.getCurrentPosition(pos => {
+    if (id !== locId) return;
+    done();
     const { longitude: lon, latitude: lat, accuracy } = pos.coords;
     if (youMark) map.removeLayer(youMark);
     youMark = L.layerGroup([
@@ -664,9 +684,17 @@ $('locBtn').addEventListener('click', () => {
       L.circleMarker([lat, lon], { radius: 7, color: '#fff', weight: 2, fillColor: '#2a7fff', fillOpacity: 1, interactive: false })
     ]).addTo(map);
     measure(lon, lat, 'gps', accuracy);
-  }, err => setStatus(err.code === 1 ? 'Location is turned off for this site. Allow it in the browser, or tap the map instead.' : 'Couldn\'t get your location: ' + err.message, true),
-  { enableHighAccuracy: true, timeout: 20000, maximumAge: 10000 });
-});
+  }, err => {
+    if (id !== locId) return;
+    done();
+    // 1: this site isn't allowed (on some phones also what Location being off looks like);
+    // 2: no position to be had, usually Location off; 3: timed out, ditto.
+    setStatus(err.code === 1
+      ? 'howtall isn\'t allowed to use your location. Allow it for this site in the browser (the icon by the address), and check Location (GPS) is on in your phone\'s settings. Or just tap the map.'
+      : LOC_OFF, true);
+  }, { enableHighAccuracy: true, timeout: 15000, maximumAge: 10000 });
+}
+map.on('click', () => { locId++; const b = document.getElementById('locBtn'); if (b) b.classList.remove('busy'); });
 
 // Bring the whole circle into the part of the map the panel doesn't
 // cover, zooming in if it would be small. Run again once the result has
