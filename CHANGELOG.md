@@ -1,5 +1,10 @@
 # Changelog
 
+## 0.11.0 — 2026-11-15
+
+- The circle goes up to 200 m radius (about 12.5 ha), up from 100 m. Tested in dense Bay of Plenty forest: 2.3 s and 2.4 MB for a fresh 200 m circle, 744 trees found.
+- Tree dots are thinned on screen so a big circle isn't a solid mass of dots: tallest first, a dot is drawn only if it's at least 12 px from the others. Zooming in shows more (143 dots zoomed out on that 200 m circle, 686 two zoom levels in). Taps pick from the dots that are showing.
+
 ## 0.10.1 — 2026-11-15
 
 - A tap within about a fingertip (22 px) of any tree shows that tree's height instead of starting a new circle. This includes the pink tallest tree and the green labelled tops, which didn't respond to taps before. Where trees are close together, the nearest one to the finger is shown. The tap area was 12 px before, and only for the small dots.

@@ -153,7 +153,7 @@ dialog::backdrop { background: rgba(0,0,0,0.45); }
   <div class="result" id="result"><div class="hint">Tap a tree on the map to see how tall it is, or press <span data-icon="crosshair" data-icon-size="15" style="vertical-align:-3px"></span> for where you are. Only the ground right around the spot is downloaded.</div></div>
   <div class="radius show" id="radiusRow">
     <label for="radius">Circle</label>
-    <input type="range" id="radius" min="10" max="100" step="5" value="25">
+    <input type="range" id="radius" min="10" max="200" step="5" value="25">
     <output id="radiusOut" for="radius"></output>
   </div>
   <div class="foot"><button class="bmc" id="aboutBtn" type="button" aria-haspopup="dialog"><span data-icon="info" data-icon-size="15"></span>About</button><a class="bmc" href="https://buymeacoffee.com/rutherfordecology" target="_blank" rel="noopener"><span data-icon="coffee" data-icon-size="15"></span>Buy me a coffee</a></div>
@@ -191,7 +191,7 @@ dialog::backdrop { background: rgba(0,0,0,0.45); }
     <h2>howtall</h2>
     <p>Tap a tree and howtall tells you how tall it is, from the LiDAR survey of that spot, published by Toitū Te Whenua LINZ. New Zealand only, wherever LINZ has a 1 m surface model.</p>
     <h3>What a tap gives you</h3>
-    <p>A tap reads a circle round the spot; the slider sets its radius, 10 to 100 m (up to about 3 ha). You get the tallest tree in the circle, the tree you tapped (the highest point within 3 m of the tap, since a crown's top is rarely exactly where a finger lands), the five tallest tree tops, and how much of the circle is over 2 m. The tallest tree is marked pink on the map, the other tall tops green. Every other tree over 5 m gets a small dot: tap one to see its height. Two tops count as separate trees only if the canopy dips between them by at least 2 m, or a quarter of the shorter tree's height, so the bumps on one broad crown get one dot.</p>
+    <p>A tap reads a circle round the spot; the slider sets its radius, 10 to 200 m (up to about 12.5 ha). You get the tallest tree in the circle, the tree you tapped (the highest point within 3 m of the tap, since a crown's top is rarely exactly where a finger lands), the five tallest tree tops, and how much of the circle is over 2 m. The tallest tree is marked pink on the map, the other tall tops green. Every other tree over 5 m gets a small dot: tap one to see its height. Two tops count as separate trees only if the canopy dips between them by at least 2 m, or a quarter of the shorter tree's height, so the bumps on one broad crown get one dot.</p>
     <p>The <strong>target button</strong> on the map uses your phone's location; Location (GPS) needs to be on in the phone's settings. Under a forest canopy GPS is often out by 5 to 20 m, so the circle is widened to at least your GPS accuracy.</p>
     <h3>Aerial, Ground and Topo</h3>
     <p><strong>Aerial</strong> shows the photo with tree heights coloured over it. <strong>Ground</strong> takes away the photo and the trees: inside the circle it shows the bare earth from the LiDAR's ground model at 1 m, shaded as if lit from the north-west, so tracks, streams, slips and old earthworks under the canopy show up. Outside the circle is Esri's much coarser world hillshade, for context. <strong>Topo</strong> is LINZ's NZ Topo50 map (contours, tracks, huts) with the tree heights coloured over it; zoomed well out it's OpenTopoMap.</p>
@@ -199,7 +199,7 @@ dialog::backdrop { background: rgba(0,0,0,0.45); }
     <p>Height is the surface model (the top of everything) minus the ground model (the bare earth under it), both from the same flight, on a 1 m grid. Things that are clearly power lines or pylons are left out: a cell far above everything round it and too narrow to be a crown. Buildings are not left out, so a tap on a roof gives the roof.</p>
     <p>The 1 m grid can clip the very tip of a narrow, pointed crown (a young conifer, a cabbage tree), so the true top may be a metre or two higher. Heights are for the date the survey was flown; a tree may have grown since. When more than one survey covers the spot, the newest is used; the line under the result says when it was flown and whose it is.</p>
     <h3>Data used</h3>
-    <p>Nothing is downloaded until you tap. Then howtall reads just the 1 m cells around the spot from LINZ's Cloud-Optimised GeoTIFFs, in blocks of 512 × 512 m: about 0.75 MB a tap for a small circle, up to about 3 MB for a 100 m circle that crosses block edges. Blocks are kept, so tapping again nearby downloads nothing.</p>
+    <p>Nothing is downloaded until you tap. Then howtall reads just the 1 m cells around the spot from LINZ's Cloud-Optimised GeoTIFFs, in blocks of 512 × 512 m: about 0.75 MB a tap for a small circle, about 2.5 MB for a 200 m circle, more where it straddles block edges. Blocks are kept, so tapping again nearby downloads nothing.</p>
     <h3>Sources</h3>
     <p>LiDAR: <a href="https://registry.opendata.aws/nz-elevation/" target="_blank" rel="noopener">nz-elevation</a>, published by Toitū Te Whenua Land Information New Zealand, CC BY 4.0. Each survey has its own licensor, often a regional council, named under the result and on the map. Maps: Esri World Imagery and World Hillshade; NZ Topo50 from Toitū Te Whenua LINZ (CC BY 4.0); <a href="https://opentopomap.org/about" target="_blank" rel="noopener">OpenTopoMap</a> (CC-BY-SA). howtall's code is PolyForm Strict 1.0.0 and its own words and images CC BY-NC-ND 4.0 (<a href="https://github.com/rutherfordecology/howtall/blob/main/LICENSE" target="_blank" rel="noopener">licence</a>). Built by <a href="https://www.rutherfordecology.co.nz/" target="_blank" rel="noopener">Rutherford Ecology</a> from the LiDAR tab of inferrd.</p>
     <p>Useful? <a href="https://buymeacoffee.com/rutherfordecology" target="_blank" rel="noopener">Buy me a coffee</a>.</p>
@@ -211,7 +211,7 @@ dialog::backdrop { background: rgba(0,0,0,0.45); }
 <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
 <script src="icons.js"></script>
 <script>
-const VERSION = '0.10.1';
+const VERSION = '0.11.0';
 document.getElementById('ver').textContent = 'v' + VERSION;
 document.getElementById('aboutVer').textContent = 'Version ' + VERSION;
 
@@ -545,7 +545,7 @@ function circleStats(p, cx, cy, rad) {
   for (const i of peaks) {
     if (h[i] < 5) break;
     if (trees.every(j => sepBy(i, j))) trees.push(i);
-    if (trees.length >= 600) break;
+    if (trees.length >= 2500) break;
   }
   // The five labelled tops: the tallest trees, at least 6 m apart so the
   // labels have room.
@@ -697,7 +697,7 @@ const ll = (x, y) => { const q = toLonLat(x, y); return [q[1], q[0]]; };
 
 /* ---------- UI ---------- */
 const $ = (id) => document.getElementById(id);
-const R_MIN = 10, R_MAX = 100;
+const R_MIN = 10, R_MAX = 200;
 let radius = 25;
 try { const r = Number(localStorage.getItem('howtall.radius')); if (r >= R_MIN && r <= R_MAX) radius = r; } catch (e) {}
 $('radius').value = radius;
@@ -733,9 +733,9 @@ setLook(look);
 const TAP_PX = 22;
 function treeNear(pt) {
   if (!lastTops || !topMarks || !map.hasLayer(topMarks)) return -1;
-  const [p, main, others, trees] = lastTops;
+  const [p, main, others] = lastTops;
   let best = -1, bestD = TAP_PX * TAP_PX;
-  for (const i of new Set([main, ...others, ...(trees || [])])) {
+  for (const i of new Set([main, ...others, ...dotsShown])) {
     if (i < 0) continue;
     const [u, w] = cellXY(p, i), q = map.latLngToContainerPoint(ll(u, w));
     const d = (q.x - pt.x) ** 2 + (q.y - pt.y) ** 2;
@@ -857,7 +857,8 @@ async function measure(lon, lat, kind, acc) {
 // The tallest tree (pink, always labelled) and the other tall tops
 // (green). A label that would sit on top of one already placed is left
 // off at this zoom, so only its dot shows; zooming in redraws them.
-let topMarks = null, lastTops = null;
+let topMarks = null, lastTops = null, dotsShown = [];
+const DOT_GAP_PX = 12; // dots closer than this on screen are thinned out
 // Every tree's dot is drawn on a canvas; taps on and near it are handled
 // by the map's click (treeNear), so a finger needn't hit the dot exactly.
 const dotRenderer = L.canvas({ padding: 0.5 });
@@ -866,9 +867,24 @@ function drawTops(p, main, others, trees) {
   lastTops = [p, main, others, trees];
   if (topMarks) map.removeLayer(topMarks);
   topMarks = L.layerGroup().addTo(map);
+  // Dots are thinned on screen: tallest first, a tree gets a dot only if
+  // it's at least DOT_GAP_PX from the dots already drawn, so a big circle
+  // zoomed out isn't a solid mass of dots. Zooming in shows more.
   const shown = new Set([main, ...others]);
+  const taken = new Map(), cellPx = DOT_GAP_PX, key = (a, b) => a + ',' + b;
+  const free = (pt) => {
+    const gx = Math.floor(pt.x / cellPx), gy = Math.floor(pt.y / cellPx);
+    for (let a = gx - 1; a <= gx + 1; a++) for (let b = gy - 1; b <= gy + 1; b++)
+      for (const q of taken.get(key(a, b)) || []) if ((q.x - pt.x) ** 2 + (q.y - pt.y) ** 2 < DOT_GAP_PX * DOT_GAP_PX) return false;
+    return true;
+  };
+  const take = (pt) => { const k = key(Math.floor(pt.x / cellPx), Math.floor(pt.y / cellPx)); if (!taken.has(k)) taken.set(k, []); taken.get(k).push(pt); };
+  [main, ...others].forEach(i => { if (i >= 0) { const [u, w] = cellXY(p, i); take(map.latLngToContainerPoint(ll(u, w))); } });
+  dotsShown = [];
   (trees || []).filter(i => !shown.has(i)).forEach(i => {
-    const [u, w] = cellXY(p, i), at = ll(u, w);
+    const [u, w] = cellXY(p, i), at = ll(u, w), pt = map.latLngToContainerPoint(at);
+    if (!free(pt)) return;
+    take(pt); dotsShown.push(i);
     L.circleMarker(at, { renderer: dotRenderer, radius: 3.5, color: '#fff', weight: 1.5, fillColor: '#0a3f26', fillOpacity: 0.9, interactive: false })
       .addTo(topMarks);
   });

@@ -10,7 +10,7 @@ Height = DSM − DEM from the same LINZ survey, 1 m grid, power lines and pylons
 
 ## Data use
 
-Nothing is read until you tap. The 1:10k sheet tile under the point is worked out from its NZTM coordinates (no survey tile lists are downloaded), a HEAD request per nearby survey says which surveys have it, and only the COG's own 512 × 512 m blocks under the circle are read: about 0.75 MB a tap for a small circle, up to about 3 MB for a 100 m circle that crosses block edges. Blocks are kept, so later taps in the same block download nothing. LINZ's catalogue (~65 KB) is cached for a week.
+Nothing is read until you tap. The 1:10k sheet tile under the point is worked out from its NZTM coordinates (no survey tile lists are downloaded), a HEAD request per nearby survey says which surveys have it, and only the COG's own 512 × 512 m blocks under the circle are read: about 0.75 MB a tap for a small circle, about 2.5 MB for a 200 m circle, more where it straddles block edges. Blocks are kept, so later taps in the same block download nothing. LINZ's catalogue (~65 KB) is cached for a week.
 
 ## Running
 
