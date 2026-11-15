@@ -191,7 +191,7 @@ dialog::backdrop { background: rgba(0,0,0,0.45); }
     <h2>howtall</h2>
     <p>Tap a tree and howtall tells you how tall it is, from the LiDAR survey Toitū Te Whenua LINZ flew over that spot. New Zealand only, wherever LINZ has a 1 m surface model.</p>
     <h3>What a tap gives you</h3>
-    <p>A tap reads a circle round the spot; the slider sets its radius, 10 to 100 m (up to about 3 ha). You get the tallest tree in the circle, the tree you tapped (the highest point within 3 m of the tap, since a crown's top is rarely exactly where a finger lands), the five tallest tree tops, how much of the circle is over 2 m, and the average height of that cover. The tallest tree is marked pink on the map, the other tall tops green. Every other tree top over 5 m gets a small dot: tap one to see its height.</p>
+    <p>A tap reads a circle round the spot; the slider sets its radius, 10 to 100 m (up to about 3 ha). You get the tallest tree in the circle, the tree you tapped (the highest point within 3 m of the tap, since a crown's top is rarely exactly where a finger lands), the five tallest tree tops, how much of the circle is over 2 m, and the average height of that cover. The tallest tree is marked pink on the map, the other tall tops green. Every other tree over 5 m gets a small dot: tap one to see its height. Two tops count as separate trees only if the canopy dips between them by at least 2 m, or a quarter of the shorter tree's height, so the bumps on one broad crown get one dot.</p>
     <p>The <strong>target button</strong> on the map uses your phone's location; Location (GPS) needs to be on in the phone's settings. Under a forest canopy GPS is often out by 5 to 20 m, so the circle is widened to at least your GPS accuracy.</p>
     <h3>Aerial and Ground</h3>
     <p><strong>Aerial</strong> shows the photo with tree heights coloured over it. <strong>Ground</strong> takes away the photo and the trees: inside the circle it shows the bare earth from the LiDAR's ground model at 1 m, shaded as if lit from the north-west, so tracks, streams, slips and old earthworks under the canopy show up. Outside the circle is Esri's much coarser world hillshade, for context.</p>
@@ -211,7 +211,7 @@ dialog::backdrop { background: rgba(0,0,0,0.45); }
 <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
 <script src="icons.js"></script>
 <script>
-const VERSION = '0.5.1';
+const VERSION = '0.6.0';
 document.getElementById('ver').textContent = 'v' + VERSION;
 document.getElementById('aboutVer').textContent = 'Version ' + VERSION;
 
@@ -240,6 +240,7 @@ const NZ_BBOX = [165.8, -47.4, 179.0, -34.0];
 const SPIKE_M = 100;       // taller than any NZ tree: birds, wires, return errors
 const WIRE_CLOSE_M = 5;    // see wireCells()
 const WIRE_ABOVE_M = 10;
+const DIP_M = 2, DIP_FRAC = 0.25; // how far the canopy must dip between two separate trees
 const TREE_REACH_M = 3;    // a tree's top is the highest cell this close to the tap
 const PAD_M = 6;           // extra read round the circle, for the wire test
 const CATALOG_KEY = 'howtall.catalog.v1', CATALOG_DAYS = 7;
@@ -454,9 +455,9 @@ async function getPatch(survey, cx, cy, reach) {
 const cellAt = (p, x, y) => { const c = Math.floor(x - p.g.x0), r = Math.floor(p.g.y1 - y); return c >= 0 && r >= 0 && c < p.g.W && r < p.g.H ? r * p.g.W + c : -1; };
 const cellXY = (p, i) => [p.g.x0 + (i % p.g.W) + 0.5, p.g.y1 - Math.floor(i / p.g.W) - 0.5];
 
-// Heights within a circle: the highest cell, the tree tops (cells over
-// 3 m that are the highest within 2 m, kept at least 3 m apart, tallest
-// first), cover over 2 m and its mean height.
+// Heights within a circle: the highest cell, the trees (one top per
+// crown, over 5 m), the five tallest of them for labels, cover over 2 m and
+// its mean height.
 function circleStats(p, cx, cy, rad) {
   const { W, H } = p.g, h = p.h;
   let n = 0, nData = 0, over2 = 0, sum2 = 0, top = -1;
@@ -483,20 +484,45 @@ function circleStats(p, cx, cy, rad) {
     if (isTop) peaks.push(i);
   }
   peaks.sort((a, b) => h[b] - h[a]);
-  // Tops kept at least `sep` m apart, tallest first: 6 m for the five
-  // labelled ones, 3 m for every tree's dot (two tops of one broad crown
-  // closer than that count as one tree).
-  const spaced = (sep, minH, max) => {
-    const out = [];
-    for (const i of peaks) {
-      if (h[i] < minH) break;
-      const [x, y] = cellXY(p, i);
-      if (out.every(j => { const [u, w] = cellXY(p, j); return (u - x) ** 2 + (w - y) ** 2 >= sep * sep; })) out.push(i);
-      if (out.length >= max) break;
+  // One tree per crown. Taking tops tallest first, a top is a new tree only
+  // if, on the straight line to every tree already found within 20 m, the
+  // canopy dips by at least DIP_M or DIP_FRAC of the lower top before rising
+  // again. Bumps on one broad crown don't dip that far, so they join the
+  // taller top. The line is read every 0.5 m and smoothed over three
+  // readings so a single gap between leaves doesn't count as a dip; no data
+  // on the line (a gap, water, a power line left out) counts as a dip.
+  const sepBy = (i, j) => {
+    const [x0, y0] = cellXY(p, i), [x1, y1] = cellXY(p, j);
+    const d = Math.hypot(x1 - x0, y1 - y0);
+    if (d < 2) return false;                 // closer than 2 m: same crown
+    if (d > 20) return true;                 // too far apart to be one crown
+    const need = Math.min(h[i], h[j]) - Math.max(DIP_M, DIP_FRAC * Math.min(h[i], h[j]));
+    const steps = Math.ceil(d / 0.5), vals = [];
+    for (let k = 0; k <= steps; k++) {
+      const c = cellAt(p, x0 + (x1 - x0) * k / steps, y0 + (y1 - y0) * k / steps);
+      vals.push(c >= 0 ? h[c] : NaN);
     }
-    return out;
+    for (let k = 1; k < vals.length - 1; k++) {
+      const m = (vals[k - 1] + vals[k] + vals[k + 1]) / 3;
+      if (!(m === m) || m <= need) return true;
+    }
+    return false;
   };
-  return { n, nData, over2, mean2: over2 ? sum2 / over2 : NaN, top, tops: spaced(6, 3, 5), trees: spaced(3, 5, 600) };
+  const trees = [];
+  for (const i of peaks) {
+    if (h[i] < 5) break;
+    if (trees.every(j => sepBy(i, j))) trees.push(i);
+    if (trees.length >= 600) break;
+  }
+  // The five labelled tops: the tallest trees, at least 6 m apart so the
+  // labels have room.
+  const tops = [];
+  for (const i of trees) {
+    const [x, y] = cellXY(p, i);
+    if (tops.every(j => { const [u, w] = cellXY(p, j); return (u - x) ** 2 + (w - y) ** 2 >= 36; })) tops.push(i);
+    if (tops.length >= 5) break;
+  }
+  return { n, nData, over2, mean2: over2 ? sum2 / over2 : NaN, top, tops, trees };
 }
 
 /* ---------- map ---------- */
@@ -796,7 +822,9 @@ function show(p, surveys, x, y, kind, reach) {
   const st = circleStats(p, x, y, reach);
   const atTap = circleStats(p, x, y, TREE_REACH_M).top; // the top of the tree right at the spot
   drawPatch(p, x, y, reach);
-  const main = st.top;
+  // The tallest tree is the tallest real top in the circle, not just its
+  // highest cell, which can be the flank of a bigger crown just outside.
+  const main = st.trees.length ? st.trees[0] : st.top;
   L.circle(ll(x, y), { radius: reach, color: '#fff', weight: 1.5, dashArray: '4 4', fill: false, interactive: false }).addTo(marks);
   const tops = st.tops.filter(i => h[i] >= 5);
   drawTops(p, main >= 0 && h[main] >= 0.5 ? main : -1, tops.filter(i => i !== main).slice(0, 4), st.trees);

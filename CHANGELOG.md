@@ -1,5 +1,11 @@
 # Changelog
 
+## 0.6.0 — 2026-11-15
+
+- One dot per tree, not a cluster per crown. Two tops count as separate trees only if the canopy dips between them by at least 2 m, or a quarter of the shorter tree's height (whichever is more), and rises again; tops closer than 2 m are always one tree. A dense 50 m forest circle went from 135 dots to 51.
+- The tallest tree is now the tallest real tree top in the circle. Before, it was the circle's highest point, which could be the side of a bigger tree just outside the circle (a Hamilton park showed 42.9 m for a crown flank; now 30.4 m, the tallest top inside).
+- The five labelled tops are the five tallest trees, at least 6 m apart.
+
 ## 0.5.1 — 2026-11-15
 
 - The menu's inferrd. link goes to its new address, inferrd.rutherfordecology.co.nz.
