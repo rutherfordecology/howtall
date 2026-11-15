@@ -197,14 +197,14 @@ dialog::backdrop { background: rgba(0,0,0,0.45); }
     <p>A tap reads a circle round the spot; the slider sets its radius, 10 to 100 m (up to about 3 ha). You get the tallest tree in the circle, the tree you tapped (the highest point within 3 m of the tap, since a crown's top is rarely exactly where a finger lands), the five tallest tree tops, how much of the circle is over 2 m, and the average height of that cover. The tallest tree is marked pink on the map, the other tall tops green. Every other tree over 5 m gets a small dot: tap one to see its height. Two tops count as separate trees only if the canopy dips between them by at least 2 m, or a quarter of the shorter tree's height, so the bumps on one broad crown get one dot.</p>
     <p>The <strong>target button</strong> on the map uses your phone's location; Location (GPS) needs to be on in the phone's settings. Under a forest canopy GPS is often out by 5 to 20 m, so the circle is widened to at least your GPS accuracy.</p>
     <h3>Aerial and Ground</h3>
-    <p><strong>Aerial</strong> shows the photo with tree heights coloured over it. <strong>Ground</strong> takes away the photo and the trees: inside the circle it shows the bare earth from the LiDAR's ground model at 1 m, shaded as if lit from the north-west, so tracks, streams, slips and old earthworks under the canopy show up. Outside the circle is Esri's much coarser world hillshade, for context. <strong>Topo</strong> is OpenTopoMap's topographic map (contours, tracks, huts) with the tree heights coloured over it.</p>
+    <p><strong>Aerial</strong> shows the photo with tree heights coloured over it. <strong>Ground</strong> takes away the photo and the trees: inside the circle it shows the bare earth from the LiDAR's ground model at 1 m, shaded as if lit from the north-west, so tracks, streams, slips and old earthworks under the canopy show up. Outside the circle is Esri's much coarser world hillshade, for context. <strong>Topo</strong> is LINZ's NZ Topo50 map (contours, tracks, huts) with the tree heights coloured over it; zoomed well out it's OpenTopoMap.</p>
     <h3>How heights are worked out</h3>
     <p>Height is the surface model (the top of everything) minus the ground model (the bare earth under it), both from the same flight, on a 1 m grid. Things that are clearly power lines or pylons are left out: a cell far above everything round it and too narrow to be a crown. Buildings are not left out, so a tap on a roof gives the roof.</p>
     <p>The 1 m grid can clip the very tip of a narrow, pointed crown (a young conifer, a cabbage tree), so the true top may be a metre or two higher. Heights are for the date the survey was flown; a tree may have grown since. When more than one survey covers the spot, the newest is shown first and the others are buttons under the result.</p>
     <h3>Data used</h3>
     <p>Nothing is downloaded until you tap. Then howtall reads just the 1 m cells around the spot from LINZ's Cloud-Optimised GeoTIFFs, in blocks of 512 × 512 m: about 0.75 MB a tap for a small circle, up to about 3 MB for a 100 m circle that crosses block edges. Blocks are kept, so tapping again nearby downloads nothing.</p>
     <h3>Sources</h3>
-    <p>LiDAR: <a href="https://registry.opendata.aws/nz-elevation/" target="_blank" rel="noopener">nz-elevation</a>, published by Toitū Te Whenua Land Information New Zealand, CC BY 4.0. Each survey has its own licensor, often a regional council, named under the result and on the map. Maps: Esri World Imagery and World Hillshade; <a href="https://opentopomap.org/about" target="_blank" rel="noopener">OpenTopoMap</a> (CC-BY-SA). howtall's code is PolyForm Strict 1.0.0 and its own words and images CC BY-NC-ND 4.0 (<a href="https://github.com/rutherfordecology/howtall/blob/main/LICENSE" target="_blank" rel="noopener">licence</a>). Built by <a href="https://www.rutherfordecology.co.nz/" target="_blank" rel="noopener">Rutherford Ecology</a> from the LiDAR tab of inferrd.</p>
+    <p>LiDAR: <a href="https://registry.opendata.aws/nz-elevation/" target="_blank" rel="noopener">nz-elevation</a>, published by Toitū Te Whenua Land Information New Zealand, CC BY 4.0. Each survey has its own licensor, often a regional council, named under the result and on the map. Maps: Esri World Imagery and World Hillshade; NZ Topo50 from Toitū Te Whenua LINZ (CC BY 4.0); <a href="https://opentopomap.org/about" target="_blank" rel="noopener">OpenTopoMap</a> (CC-BY-SA). howtall's code is PolyForm Strict 1.0.0 and its own words and images CC BY-NC-ND 4.0 (<a href="https://github.com/rutherfordecology/howtall/blob/main/LICENSE" target="_blank" rel="noopener">licence</a>). Built by <a href="https://www.rutherfordecology.co.nz/" target="_blank" rel="noopener">Rutherford Ecology</a> from the LiDAR tab of inferrd.</p>
     <p>Useful? <a href="https://buymeacoffee.com/rutherfordecology" target="_blank" rel="noopener">Buy me a coffee</a>.</p>
     <p id="aboutVer" style="color:var(--grey);font-size:12px;"></p>
   </div>
@@ -214,7 +214,7 @@ dialog::backdrop { background: rgba(0,0,0,0.45); }
 <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
 <script src="icons.js"></script>
 <script>
-const VERSION = '0.8.0';
+const VERSION = '0.9.0';
 document.getElementById('ver').textContent = 'v' + VERSION;
 document.getElementById('aboutVer').textContent = 'Version ' + VERSION;
 
@@ -568,17 +568,25 @@ L.control.zoom({ position: 'bottomright' }).addTo(map);
 // Three looks: Aerial (photo, heights coloured on top), Ground (no photo,
 // no trees: the bare earth from the LiDAR's ground model, shaded grey,
 // over Esri's coarse world hillshade for the land round it) and Topo
-// (OpenTopoMap, as in occurd., heights coloured on top).
+// (LINZ Topo50, heights coloured on top).
 const baseAerial = L.tileLayer('https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}', {
   maxZoom: 21, maxNativeZoom: 19, attribution: 'Imagery © Esri'
 });
 const baseGround = L.tileLayer('https://server.arcgisonline.com/ArcGIS/rest/services/Elevation/World_Hillshade/MapServer/tile/{z}/{y}/{x}', {
   maxZoom: 21, maxNativeZoom: 16, attribution: 'Hillshade © Esri'
 });
-// OpenTopoMap has tiles to zoom 17; closer in they're enlarged.
-const baseTopo = L.tileLayer('https://{s}.tile.opentopomap.org/{z}/{x}/{y}.png', {
-  maxZoom: 21, maxNativeZoom: 17, attribution: 'Map © <a href="https://opentopomap.org/about">OpenTopoMap</a> (CC-BY-SA), © OpenStreetMap contributors'
-});
+// Topo: LINZ's NZ Topo50 from zoom 12 in (from the LINZ Data Service,
+// with Rutherford Ecology's key), OpenTopoMap further out, where a
+// 1:50k map shrunk down can't be read.
+const LDS_KEY = '4eef1103ab9041ea849b1a3faf7c8106';
+const baseTopo = L.layerGroup([
+  L.tileLayer('https://{s}.tile.opentopomap.org/{z}/{x}/{y}.png', {
+    maxZoom: 11, attribution: 'Map © <a href="https://opentopomap.org/about">OpenTopoMap</a> (CC-BY-SA), © OpenStreetMap contributors'
+  }),
+  L.tileLayer('https://tiles-{s}.data-cdn.linz.govt.nz/services;key=' + LDS_KEY + '/tiles/v4/layer=50767/EPSG:3857/{z}/{x}/{y}.png', {
+    subdomains: 'abcd', minZoom: 12, maxZoom: 21, maxNativeZoom: 17, attribution: 'NZ Topo50 © Toitū Te Whenua LINZ, CC BY 4.0'
+  })
+]);
 const BASES = { aerial: baseAerial, ground: baseGround, topo: baseTopo };
 let look = 'aerial';
 try { const v = localStorage.getItem('howtall.look'); if (BASES[v]) look = v; } catch (e) {}

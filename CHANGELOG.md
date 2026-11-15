@@ -1,5 +1,11 @@
 # Changelog
 
+## 0.9.0 — 2026-11-15
+
+- Topo is now LINZ's NZ Topo50 map from zoom 12 in (from the LINZ Data Service, CC BY 4.0), with OpenTopoMap further out, where a 1:50,000 map shrunk down can't be read. Topo50 is drawn for 1:50,000, so close in it's enlarged.
+- The Data Service key is in the page, by Malcolm's choice (low risk; the same key the catchment maps use).
+- Aerial stays Esri's: the Data Service has no nationwide aerial map, and LINZ Basemaps needs its own kind of key.
+
 ## 0.8.0 — 2026-11-15
 
 - The LiDAR credit names each survey's own licensor (often a council or a councils' group: BOPLASS for Bay of Plenty, Environment Canterbury for Canterbury), under the result and on the map, as CC BY 4.0 asks. Before, everything was credited to LINZ, which publishes the surveys but often isn't their licensor. howtall reads the licensor from the last 8 KB of the survey's collection.json, once per survey, and remembers it.
