@@ -211,7 +211,7 @@ dialog::backdrop { background: rgba(0,0,0,0.45); }
 <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
 <script src="icons.js"></script>
 <script>
-const VERSION = '0.10.0';
+const VERSION = '0.10.1';
 document.getElementById('ver').textContent = 'v' + VERSION;
 document.getElementById('aboutVer').textContent = 'Version ' + VERSION;
 
@@ -728,7 +728,31 @@ let last = null;        // the last measurement asked for: { lon, lat, kind: 'ta
 let runId = 0;
 setLook(look);
 
-map.on('click', (e) => measure(e.latlng.lng, e.latlng.lat, 'tap'));
+// A tap within TAP_PX of a tree (a dot or a labelled top) shows that tree's
+// height; anywhere else it measures a new circle.
+const TAP_PX = 22;
+function treeNear(pt) {
+  if (!lastTops || !topMarks || !map.hasLayer(topMarks)) return -1;
+  const [p, main, others, trees] = lastTops;
+  let best = -1, bestD = TAP_PX * TAP_PX;
+  for (const i of new Set([main, ...others, ...(trees || [])])) {
+    if (i < 0) continue;
+    const [u, w] = cellXY(p, i), q = map.latLngToContainerPoint(ll(u, w));
+    const d = (q.x - pt.x) ** 2 + (q.y - pt.y) ** 2;
+    if (d <= bestD) { best = i; bestD = d; }
+  }
+  return best;
+}
+map.on('click', (e) => {
+  const i = treeNear(e.containerPoint);
+  if (i >= 0) {
+    const p = lastTops[0], [u, w] = cellXY(p, i);
+    tapTip.setLatLng(ll(u, w)).setContent(fmtM(p.h[i]) + ' m');
+    map.openTooltip(tapTip);
+    return;
+  }
+  measure(e.latlng.lng, e.latlng.lat, 'tap');
+});
 
 // Where I am: a target button on the map, above the zoom buttons.
 const LocControl = L.Control.extend({
@@ -834,9 +858,9 @@ async function measure(lon, lat, kind, acc) {
 // (green). A label that would sit on top of one already placed is left
 // off at this zoom, so only its dot shows; zooming in redraws them.
 let topMarks = null, lastTops = null;
-// Every tree's dot is on a canvas with a wide tap tolerance, so a finger
-// finds it; a tap shows that tree's height and doesn't start a new circle.
-const dotRenderer = L.canvas({ padding: 0.5, tolerance: 12 });
+// Every tree's dot is drawn on a canvas; taps on and near it are handled
+// by the map's click (treeNear), so a finger needn't hit the dot exactly.
+const dotRenderer = L.canvas({ padding: 0.5 });
 const tapTip = L.tooltip({ permanent: true, direction: 'top', offset: [0, -5], className: 'tree-label picked' });
 function drawTops(p, main, others, trees) {
   lastTops = [p, main, others, trees];
@@ -845,8 +869,7 @@ function drawTops(p, main, others, trees) {
   const shown = new Set([main, ...others]);
   (trees || []).filter(i => !shown.has(i)).forEach(i => {
     const [u, w] = cellXY(p, i), at = ll(u, w);
-    L.circleMarker(at, { renderer: dotRenderer, radius: 3.5, color: '#fff', weight: 1.5, fillColor: '#0a3f26', fillOpacity: 0.9, bubblingMouseEvents: false })
-      .on('click', () => { tapTip.setLatLng(at).setContent(fmtM(p.h[i]) + ' m'); map.openTooltip(tapTip); })
+    L.circleMarker(at, { renderer: dotRenderer, radius: 3.5, color: '#fff', weight: 1.5, fillColor: '#0a3f26', fillOpacity: 0.9, interactive: false })
       .addTo(topMarks);
   });
   const placed = [];

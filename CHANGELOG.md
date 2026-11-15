@@ -1,5 +1,9 @@
 # Changelog
 
+## 0.10.1 — 2026-11-15
+
+- A tap within about a fingertip (22 px) of any tree shows that tree's height instead of starting a new circle. This includes the pink tallest tree and the green labelled tops, which didn't respond to taps before. Where trees are close together, the nearest one to the finger is shown. The tap area was 12 px before, and only for the small dots.
+
 ## 0.10.0 — 2026-11-15
 
 - Tidier panel; on a phone it's about a fifth shorter, so more map shows.
