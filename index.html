@@ -191,7 +191,7 @@ dialog::backdrop { background: rgba(0,0,0,0.45); }
     <h2>howtall</h2>
     <p>Tap a tree and howtall tells you how tall it is, from the LiDAR survey of that spot, published by Toitū Te Whenua LINZ. New Zealand only, wherever LINZ has a 1 m surface model.</p>
     <h3>What a tap gives you</h3>
-    <p>A tap reads a circle round the spot; the slider sets its radius, 10 to 200 m (up to about 12.5 ha). You get the tallest tree in the circle, the tree you tapped (the highest point within 3 m of the tap, since a crown's top is rarely exactly where a finger lands), the five tallest tree tops, and how much of the circle is over 2 m. The tallest tree is marked pink on the map, the other tall tops green. Every other tree over 5 m gets a small dot: tap one to see its height. Two tops count as separate trees only if the canopy dips between them by at least 2 m, or a quarter of the shorter tree's height, so the bumps on one broad crown get one dot.</p>
+    <p>A tap reads a circle round the spot; the slider sets its radius, 10 to 200 m (up to about 12.5 ha). You get the tallest tree in the circle, the tree you tapped (the highest point within 3 m of the tap, since a crown's top is rarely exactly where a finger lands), the five tallest tree tops, and how much of the circle is over 2 m. The tallest tree is marked pink on the map, the other tall tops green. Other trees get a small dot only if they stand out: one that rises at least 5 m (or a fifth of its height) above the canopy round it, like an emergent over the forest or a lone tree in a paddock. Trees in an even canopy or a shelterbelt don't get a dot. Tap a dot to see its height. Two tops count as separate trees only if the canopy dips between them by at least 2 m, or a quarter of the shorter tree's height, so the bumps on one broad crown get one dot.</p>
     <p>The <strong>target button</strong> on the map uses your phone's location; Location (GPS) needs to be on in the phone's settings. Under a forest canopy GPS is often out by 5 to 20 m, so the circle is widened to at least your GPS accuracy.</p>
     <h3>Aerial, Ground and Topo</h3>
     <p><strong>Aerial</strong> shows the photo with tree heights coloured over it. <strong>Ground</strong> takes away the photo and the trees: inside the circle it shows the bare earth from the LiDAR's ground model at 1 m, shaded as if lit from the north-west, so tracks, streams, slips and old earthworks under the canopy show up. Outside the circle is Esri's much coarser world hillshade, for context. <strong>Topo</strong> is LINZ's NZ Topo50 map (contours, tracks, huts) with the tree heights coloured over it; zoomed well out it's OpenTopoMap.</p>
@@ -211,7 +211,7 @@ dialog::backdrop { background: rgba(0,0,0,0.45); }
 <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
 <script src="icons.js"></script>
 <script>
-const VERSION = '0.11.0';
+const VERSION = '0.12.0';
 document.getElementById('ver').textContent = 'v' + VERSION;
 document.getElementById('aboutVer').textContent = 'Version ' + VERSION;
 
@@ -240,6 +240,8 @@ const NZ_BBOX = [165.8, -47.4, 179.0, -34.0];
 const SPIKE_M = 100;       // taller than any NZ tree: birds, wires, return errors
 const WIRE_CLOSE_M = 5;    // see wireCells()
 const WIRE_ABOVE_M = 10;
+const RING_IN = 8, RING_OUT = 20;          // the canopy a tree is compared with, m out from its top
+const STANDOUT_M = 5, STANDOUT_FRAC = 0.2;  // how far above that canopy a tree must rise to get a dot
 const DIP_M = 2, DIP_FRAC = 0.25; // how far the canopy must dip between two separate trees
 const TREE_REACH_M = 3;    // a tree's top is the highest cell this close to the tap
 const PAD_M = 6;           // extra read round the circle, for the wire test
@@ -547,6 +549,33 @@ function circleStats(p, cx, cy, rad) {
     if (trees.every(j => sepBy(i, j))) trees.push(i);
     if (trees.length >= 2500) break;
   }
+  // Trees worth a dot: ones that stand out. Each tree is compared with the
+  // canopy round it, a ring RING_IN to RING_OUT m out, taking the ring's
+  // 95th-percentile height as "the canopy level" (so a hedge or shelterbelt crossing the ring still counts as canopy). A tree stands out if it
+  // rises above that by STANDOUT_M or STANDOUT_FRAC of its height
+  // (whichever is more): an emergent over the canopy, or a lone tree in
+  // open ground, where the ring is low. Trees in an even canopy don't.
+  const rIn = RING_IN, rOut = RING_OUT; // the grid is 1 m
+  const ringOff = [];
+  for (let dy = -rOut; dy <= rOut; dy++) for (let dx = -rOut; dx <= rOut; dx++) {
+    const d2 = dx * dx + dy * dy;
+    if (d2 >= rIn * rIn && d2 <= rOut * rOut) ringOff.push([dx, dy]);
+  }
+  const buf = new Float32Array(ringOff.length);
+  const standouts = trees.filter(i => {
+    const r0 = Math.floor(i / W), c0 = i % W;
+    let n = 0;
+    for (const [dx, dy] of ringOff) {
+      const r = r0 + dy, c = c0 + dx;
+      if (r < 0 || c < 0 || r >= H || c >= W) continue;
+      const v = h[r * W + c];
+      buf[n++] = v === v ? Math.max(0, v) : 0;   // no data (water, a gap) counts as open
+    }
+    if (!n) return true;
+    const ring = buf.subarray(0, n).sort();
+    const level = ring[Math.floor(n * 0.95)];
+    return h[i] - level >= Math.max(STANDOUT_M, STANDOUT_FRAC * h[i]);
+  });
   // The five labelled tops: the tallest trees, at least 6 m apart so the
   // labels have room.
   const tops = [];
@@ -555,7 +584,7 @@ function circleStats(p, cx, cy, rad) {
     if (tops.every(j => { const [u, w] = cellXY(p, j); return (u - x) ** 2 + (w - y) ** 2 >= 36; })) tops.push(i);
     if (tops.length >= 5) break;
   }
-  return { n, nData, over2, mean2: over2 ? sum2 / over2 : NaN, top, tops, trees };
+  return { n, nData, over2, mean2: over2 ? sum2 / over2 : NaN, top, tops, trees, standouts };
 }
 
 /* ---------- map ---------- */
@@ -913,7 +942,7 @@ function show(p, surveys, x, y, kind, reach) {
   const main = st.trees.length ? st.trees[0] : st.top;
   L.circle(ll(x, y), { radius: reach, color: '#fff', weight: 1.5, dashArray: '4 4', fill: false, interactive: false }).addTo(marks);
   const tops = st.tops.filter(i => h[i] >= 5);
-  drawTops(p, main >= 0 && h[main] >= 0.5 ? main : -1, tops.filter(i => i !== main).slice(0, 4), st.trees);
+  drawTops(p, main >= 0 && h[main] >= 0.5 ? main : -1, tops.filter(i => i !== main).slice(0, 4), st.standouts);
 
   const top = main >= 0 ? h[main] : NaN;
   const what = kind === 'gps' ? 'Tallest tree within ' + reach + ' m of you' : 'Tallest tree within ' + reach + ' m of the tap';

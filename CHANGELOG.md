@@ -1,5 +1,10 @@
 # Changelog
 
+## 0.12.0 — 2026-11-15
+
+- Dots only on trees that stand out: the five tallest (labelled, as before) and any tree that rises at least 5 m, or a fifth of its height, above the canopy round it. The canopy level is the 95th-percentile height in a ring 8 to 20 m from the tree's top, with gaps and water counted as open ground. That picks emergents over a forest and lone trees in open ground, and leaves out trees in an even canopy and along shelterbelts.
+- Tested, 200 m circles: Bay of Plenty forest 744 trees → 73 stand out (51 dots zoomed out); Waikato farmland 315 → 26; Canterbury farm with shelterbelts 200 → 14. A 50 m forest circle went from 43 dots to 1 plus the five labelled tops.
+
 ## 0.11.0 — 2026-11-15
 
 - The circle goes up to 200 m radius (about 12.5 ha), up from 100 m. Tested in dense Bay of Plenty forest: 2.3 s and 2.4 MB for a fresh 200 m circle, 744 trees found.
