@@ -1,5 +1,9 @@
 # Changelog
 
+## 0.12.1 — 2026-11-15
+
+- More dots: v0.12.0 left out too many. A tree now needs to rise 3 m, or a tenth of its height, above the canopy round it (was 5 m or a fifth). 200 m circles: forest 73 → 130 stand out (81 dots zoomed out), Waikato farmland 26 → 48, Canterbury farm 14 → 47 (the taller trees along its shelterbelts now show). A 50 m forest circle has 4 dots plus the five labelled tops.
+
 ## 0.12.0 — 2026-11-15
 
 - Dots only on trees that stand out: the five tallest (labelled, as before) and any tree that rises at least 5 m, or a fifth of its height, above the canopy round it. The canopy level is the 95th-percentile height in a ring 8 to 20 m from the tree's top, with gaps and water counted as open ground. That picks emergents over a forest and lone trees in open ground, and leaves out trees in an even canopy and along shelterbelts.
