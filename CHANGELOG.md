@@ -1,5 +1,9 @@
 # Changelog
 
+## 0.13.0 — 2026-11-15
+
+- A caution on opening: "Rough guide, not gospel". Heights are usually within a metre or two, but can be further out on steep slopes (trees leaning downhill read tall), at bluffs and cliff edges (false trees), where the survey is a few years old, and on narrow pointed crowns. Measure on the ground where a height matters. It shows each time until "Don't show this again" is ticked; plain OK shows it again next time.
+
 ## 0.12.1 — 2026-11-15
 
 - More dots: v0.12.0 left out too many. A tree now needs to rise 3 m, or a tenth of its height, above the canopy round it (was 5 m or a fifth). 200 m circles: forest 73 → 130 stand out (81 dots zoomed out), Waikato farmland 26 → 48, Canterbury farm 14 → 47 (the taller trees along its shelterbelts now show). A 50 m forest circle has 4 dots plus the five labelled tops.
