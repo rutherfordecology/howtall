@@ -192,7 +192,7 @@ dialog::backdrop { background: rgba(0,0,0,0.45); }
 <dialog id="about">
   <div class="about">
     <h2>howtall</h2>
-    <p>Tap a tree and howtall tells you how tall it is, from the LiDAR survey Toitū Te Whenua LINZ flew over that spot. New Zealand only, wherever LINZ has a 1 m surface model.</p>
+    <p>Tap a tree and howtall tells you how tall it is, from the LiDAR survey of that spot, published by Toitū Te Whenua LINZ. New Zealand only, wherever LINZ has a 1 m surface model.</p>
     <h3>What a tap gives you</h3>
     <p>A tap reads a circle round the spot; the slider sets its radius, 10 to 100 m (up to about 3 ha). You get the tallest tree in the circle, the tree you tapped (the highest point within 3 m of the tap, since a crown's top is rarely exactly where a finger lands), the five tallest tree tops, how much of the circle is over 2 m, and the average height of that cover. The tallest tree is marked pink on the map, the other tall tops green. Every other tree over 5 m gets a small dot: tap one to see its height. Two tops count as separate trees only if the canopy dips between them by at least 2 m, or a quarter of the shorter tree's height, so the bumps on one broad crown get one dot.</p>
     <p>The <strong>target button</strong> on the map uses your phone's location; Location (GPS) needs to be on in the phone's settings. Under a forest canopy GPS is often out by 5 to 20 m, so the circle is widened to at least your GPS accuracy.</p>
@@ -204,7 +204,7 @@ dialog::backdrop { background: rgba(0,0,0,0.45); }
     <h3>Data used</h3>
     <p>Nothing is downloaded until you tap. Then howtall reads just the 1 m cells around the spot from LINZ's Cloud-Optimised GeoTIFFs, in blocks of 512 × 512 m: about 0.75 MB a tap for a small circle, up to about 3 MB for a 100 m circle that crosses block edges. Blocks are kept, so tapping again nearby downloads nothing.</p>
     <h3>Sources</h3>
-    <p>LiDAR: Toitū Te Whenua Land Information New Zealand, <a href="https://registry.opendata.aws/nz-elevation/" target="_blank" rel="noopener">nz-elevation</a>, CC BY 4.0. Imagery: Esri World Imagery. Built by <a href="https://www.rutherfordecology.co.nz/" target="_blank" rel="noopener">Rutherford Ecology</a> from the LiDAR tab of inferrd.</p>
+    <p>LiDAR: <a href="https://registry.opendata.aws/nz-elevation/" target="_blank" rel="noopener">nz-elevation</a>, published by Toitū Te Whenua Land Information New Zealand, CC BY 4.0. Each survey has its own licensor, often a regional council, named under the result and on the map. Maps: Esri World Imagery and World Hillshade; <a href="https://opentopomap.org/about" target="_blank" rel="noopener">OpenTopoMap</a> (CC-BY-SA). howtall's code is PolyForm Strict 1.0.0 and its own words and images CC BY-NC-ND 4.0 (<a href="https://github.com/rutherfordecology/howtall/blob/main/LICENSE" target="_blank" rel="noopener">licence</a>). Built by <a href="https://www.rutherfordecology.co.nz/" target="_blank" rel="noopener">Rutherford Ecology</a> from the LiDAR tab of inferrd.</p>
     <p>Useful? <a href="https://buymeacoffee.com/rutherfordecology" target="_blank" rel="noopener">Buy me a coffee</a>.</p>
     <p id="aboutVer" style="color:var(--grey);font-size:12px;"></p>
   </div>
@@ -214,7 +214,7 @@ dialog::backdrop { background: rgba(0,0,0,0.45); }
 <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
 <script src="icons.js"></script>
 <script>
-const VERSION = '0.7.0';
+const VERSION = '0.8.0';
 document.getElementById('ver').textContent = 'v' + VERSION;
 document.getElementById('aboutVer').textContent = 'Version ' + VERSION;
 
@@ -316,6 +316,39 @@ function tilesFor(b) {
   const s = new Set();
   [[b[0], b[1]], [b[2] - 0.01, b[1]], [b[0], b[3] - 0.01], [b[2] - 0.01, b[3] - 0.01]].forEach(([x, y]) => { const n = tileName(x, y); if (n) s.add(n); });
   return [...s];
+}
+
+/* ---------- who licenses each survey ----------
+   Each survey's licensor (often a council or a councils' group, not LINZ)
+   is in the "providers" list at the end of its collection.json. Only the
+   last 8 KB is read, once per survey, and remembered. */
+const LIC_KEY = 'howtall.licensors.v1';
+let licCache = {};
+try { licCache = JSON.parse(localStorage.getItem(LIC_KEY) || '{}') || {}; } catch (e) {}
+const licPending = new Map();
+function licensors(s) {
+  if (licCache[s.id]) return Promise.resolve(licCache[s.id]);
+  if (!licPending.has(s.id)) licPending.set(s.id, fetch(BUCKET + s.dsm + 'collection.json', { headers: { Range: 'bytes=-8000' } })
+    .then(r => r.text()).then(t => {
+      const i = t.lastIndexOf('"providers"');
+      if (i < 0) return null;
+      const names = [];
+      for (const m of t.slice(i).matchAll(/\{[^{}]*\}/g)) {
+        try { const o = JSON.parse(m[0]); if (o.name && (o.roles || []).includes('licensor')) names.push(o.name); } catch (e) {}
+      }
+      if (!names.length) return null;
+      licCache[s.id] = names;
+      try { localStorage.setItem(LIC_KEY, JSON.stringify(licCache)); } catch (e) {}
+      return names;
+    }).catch(() => null).finally(() => licPending.delete(s.id)));
+  return licPending.get(s.id);
+}
+const LIDAR_CREDIT = 'LiDAR from Toitū Te Whenua LINZ, CC BY 4.0';
+let lidarCredit = LIDAR_CREDIT;
+function setLidarCredit(text) {
+  map.attributionControl.removeAttribution(lidarCredit);
+  lidarCredit = text;
+  map.attributionControl.addAttribution(lidarCredit);
 }
 
 const headCache = new Map();
@@ -530,20 +563,21 @@ function circleStats(p, cx, cy, rad) {
 
 /* ---------- map ---------- */
 const map = L.map('map', { zoomControl: false, maxZoom: 21, tap: true }).setView([-41.2, 173.5], 5);
+map.attributionControl.addAttribution(lidarCredit);
 L.control.zoom({ position: 'bottomright' }).addTo(map);
 // Three looks: Aerial (photo, heights coloured on top), Ground (no photo,
 // no trees: the bare earth from the LiDAR's ground model, shaded grey,
 // over Esri's coarse world hillshade for the land round it) and Topo
 // (OpenTopoMap, as in occurd., heights coloured on top).
 const baseAerial = L.tileLayer('https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}', {
-  maxZoom: 21, maxNativeZoom: 19, attribution: 'Imagery © Esri · LiDAR © Toitū Te Whenua LINZ, CC BY 4.0'
+  maxZoom: 21, maxNativeZoom: 19, attribution: 'Imagery © Esri'
 });
 const baseGround = L.tileLayer('https://server.arcgisonline.com/ArcGIS/rest/services/Elevation/World_Hillshade/MapServer/tile/{z}/{y}/{x}', {
-  maxZoom: 21, maxNativeZoom: 16, attribution: 'Hillshade © Esri · LiDAR © Toitū Te Whenua LINZ, CC BY 4.0'
+  maxZoom: 21, maxNativeZoom: 16, attribution: 'Hillshade © Esri'
 });
 // OpenTopoMap has tiles to zoom 17; closer in they're enlarged.
 const baseTopo = L.tileLayer('https://{s}.tile.opentopomap.org/{z}/{x}/{y}.png', {
-  maxZoom: 21, maxNativeZoom: 17, attribution: 'Map © <a href="https://opentopomap.org/about">OpenTopoMap</a> (CC-BY-SA), © OpenStreetMap contributors · LiDAR © Toitū Te Whenua LINZ, CC BY 4.0'
+  maxZoom: 21, maxNativeZoom: 17, attribution: 'Map © <a href="https://opentopomap.org/about">OpenTopoMap</a> (CC-BY-SA), © OpenStreetMap contributors'
 });
 const BASES = { aerial: baseAerial, ground: baseGround, topo: baseTopo };
 let look = 'aerial';
@@ -851,13 +885,21 @@ function show(p, surveys, x, y, kind, reach) {
   if (kind === 'gps' && last && last.acc > radius) html += '<div class="survey">The circle is ' + reach + ' m because your GPS may be out by about ' + Math.round(last.acc) + ' m.</div>';
   if (st.nData < st.n * 0.9) html += '<div class="survey">' + Math.round(100 * (1 - st.nData / st.n)) + '% of the circle has no LiDAR height: the edge of the survey, water, or power lines left out.</div>';
   html += '<div class="legend">' + legendHtml() + '</div>';
-  html += '<div class="survey">LiDAR flown ' + (p.survey.from && p.survey.to && p.survey.from !== p.survey.to ? p.survey.from + '–' + p.survey.to : p.survey.to || '') + ' · ' + esc(p.survey.name) + (p.nWires >= 15 ? ' · power lines left out' : '') + '</div>';
+  html += '<div class="survey">LiDAR flown ' + (p.survey.from && p.survey.to && p.survey.from !== p.survey.to ? p.survey.from + '–' + p.survey.to : p.survey.to || '') + ' · ' + esc(p.survey.name) + (p.nWires >= 15 ? ' · power lines left out' : '') + '<br><span id="lic">LiDAR © the survey’s licensor, CC BY 4.0, via Toitū Te Whenua LINZ</span></div>';
   if (surveys.length > 1) {
     html += '<div class="chips" role="radiogroup" aria-label="Survey">' + surveys.map(s =>
       '<button class="chip' + (s.id === p.survey.id ? ' on' : '') + '" type="button" role="radio" aria-checked="' + (s.id === p.survey.id) + '" data-id="' + esc(s.id) + '">' +
       (s.from && s.from !== s.to ? s.from + '–' + s.to : s.to || s.name) + '</button>').join('') + '</div>';
   }
   $('result').innerHTML = html;
+  // Credit the survey's own licensor, in the panel and on the map.
+  const survey = p.survey;
+  licensors(survey).then(names => {
+    if (!names || !lastTops || lastTops[0].survey !== survey) return;
+    const t = 'LiDAR © ' + names.join(', ') + ', CC BY 4.0, via Toitū Te Whenua LINZ';
+    if ($('lic')) $('lic').textContent = t;
+    setLidarCredit(t);
+  });
   if (last) fitCircle(last.lat, last.lon, reach);
   $('result').querySelectorAll('.chip').forEach(b => b.addEventListener('click', () => {
     pickedSurvey = b.dataset.id;

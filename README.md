@@ -18,4 +18,8 @@ Single static `index.html`, no build step. Serve the folder (`python -m http.ser
 
 ## Sources
 
-LiDAR: Toitū Te Whenua LINZ, [nz-elevation](https://registry.opendata.aws/nz-elevation/), CC BY 4.0. Imagery: Esri World Imagery.
+LiDAR: 1 m surface and ground models from [nz-elevation](https://registry.opendata.aws/nz-elevation/), published by Toitū Te Whenua LINZ, CC BY 4.0. Each survey has its own licensor (often a regional council or a councils' group, such as BOPLASS or Environment Canterbury); howtall reads it from the end of the survey's collection.json (the last 8 KB, once per survey) and credits it on the map and under the result. Maps: Esri World Imagery and World Hillshade; OpenTopoMap (CC-BY-SA).
+
+## Licence
+
+Code: [PolyForm Strict 1.0.0](LICENSE) — free to use for non-commercial purposes; redistributing or modifying it is not permitted. Written content and original images: [CC BY-NC-ND 4.0](https://creativecommons.org/licenses/by-nc-nd/4.0/). Third-party data, map tiles and libraries keep their own licences. For commercial use, contact Rutherford Ecology.

@@ -1,5 +1,11 @@
 # Changelog
 
+## 0.8.0 — 2026-11-15
+
+- The LiDAR credit names each survey's own licensor (often a council or a councils' group: BOPLASS for Bay of Plenty, Environment Canterbury for Canterbury), under the result and on the map, as CC BY 4.0 asks. Before, everything was credited to LINZ, which publishes the surveys but often isn't their licensor. howtall reads the licensor from the last 8 KB of the survey's collection.json, once per survey, and remembers it.
+- Licence: code under PolyForm Strict 1.0.0, howtall's own words and images under CC BY-NC-ND 4.0 (LICENSE, as in WhatDatBird). Before, the repo had no licence.
+- About and README list the sources and licences.
+
 ## 0.7.0 — 2026-11-15
 
 - Topo map as a third option beside Aerial and Ground: OpenTopoMap (the same topo layer as occurd.), with the tree heights coloured on top, a little more see-through than on the aerial so the contours and tracks show. It has detail to zoom 17; closer in it's enlarged. The choice is remembered.
