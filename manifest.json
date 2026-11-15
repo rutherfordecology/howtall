@@ -1,6 +1,6 @@
 {
-  "name": "howtall",
-  "short_name": "howtall",
+  "name": "HowTall?",
+  "short_name": "HowTall?",
   "description": "Tap a tree in New Zealand and get its height from LINZ LiDAR.",
   "start_url": "./",
   "display": "standalone",

@@ -4,7 +4,7 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
 <meta name="theme-color" content="#0a3f26">
-<title>howtall · Rutherford Ecology</title>
+<title>HowTall? · Rutherford Ecology</title>
 <meta name="description" content="Tap a tree in New Zealand and get its height from LINZ LiDAR. Reads only the few metres around the spot.">
 <link rel="manifest" href="manifest.json">
 <link rel="icon" href="icon.svg" type="image/svg+xml">
@@ -119,6 +119,9 @@ dialog::backdrop { background: rgba(0,0,0,0.45); }
 .about h3 { font-size: 14px; margin: 14px 0 4px; }
 .about p { margin-bottom: 8px; }
 .about a { color: inherit; }
+.welcome { margin-bottom: 0 !important; }
+.welcome-by { font-size: 14px; font-weight: 300; color: var(--grey); margin-bottom: 14px; }
+.welcome-by strong { font-weight: 700; }
 .caution-list { margin: 0 0 8px 18px; }
 .caution-list li { margin-bottom: 3px; }
 .caution-foot { display: flex; align-items: center; justify-content: space-between; gap: 12px; }
@@ -142,7 +145,7 @@ dialog::backdrop { background: rgba(0,0,0,0.45); }
 
 <div class="top">
   <div class="brand">
-    <div class="brand-name"><span data-icon="tree" data-icon-size="18"></span>howtall<small id="ver"></small></div>
+    <div class="brand-name"><span data-icon="tree" data-icon-size="18"></span>HowTall?<small id="ver"></small></div>
     <button class="brand-by" id="reBtn" type="button" aria-haspopup="dialog">by <strong>Rutherford</strong> <em>ecology</em><span data-icon="chevron-down" data-icon-size="13"></span></button>
   </div>
   <div class="top-right">
@@ -193,8 +196,10 @@ dialog::backdrop { background: rgba(0,0,0,0.45); }
 
 <dialog id="caution">
   <div class="about">
-    <h2>How accurate are these heights?</h2>
-    <p>howtall reads heights straight from LINZ's LiDAR surveys. For most trees they're within about half a metre of a measured height, and often closer. They can be further out:</p>
+    <h2 class="welcome">Welcome to HowTall?</h2>
+    <div class="welcome-by">by <strong>Rutherford</strong> ecology</div>
+    <h3>How accurate are these heights?</h3>
+    <p>HowTall? reads heights straight from LINZ's LiDAR surveys. For most trees they're within about half a metre of a measured height, and often closer. They can be further out:</p>
     <ul class="caution-list">
       <li><strong>Steep slopes:</strong> height is measured from the ground directly under the treetop. A tree leaning downhill can read a metre or more taller than measured from its base.</li>
       <li><strong>Bluffs and cliff edges:</strong> these can show up as trees that aren't there.</li>
@@ -211,8 +216,8 @@ dialog::backdrop { background: rgba(0,0,0,0.45); }
 
 <dialog id="about">
   <div class="about">
-    <h2>howtall</h2>
-    <p>Tap a tree and howtall tells you how tall it is, from the LiDAR survey of that spot, published by Toitū Te Whenua LINZ. New Zealand only, wherever LINZ has a 1 m surface model.</p>
+    <h2>HowTall?</h2>
+    <p>Tap a tree and HowTall? tells you how tall it is, from the LiDAR survey of that spot, published by Toitū Te Whenua LINZ. New Zealand only, wherever LINZ has a 1 m surface model.</p>
     <h3>What a tap gives you</h3>
     <p>A tap reads a circle round the spot; the slider sets its radius, 10 to 200 m (up to about 12.5 ha). You get the tallest tree in the circle, the tree you tapped (the highest point within 3 m of the tap, since a crown's top is rarely exactly where a finger lands), the five tallest tree tops, and how much of the circle is over 2 m. The tallest tree is marked pink on the map, the other tall tops green. Other trees get a small dot only if they stand out: one that rises at least 3 m (or a tenth of its height) above the canopy round it, like an emergent over the forest or a lone tree in a paddock. Trees in an even canopy don't get a dot. Tap a dot to see its height. Two tops count as separate trees only if the canopy dips between them by at least 2 m, or a quarter of the shorter tree's height, so the bumps on one broad crown get one dot.</p>
     <p>The <strong>target button</strong> on the map uses your phone's location; Location (GPS) needs to be on in the phone's settings. Under a forest canopy GPS is often out by 5 to 20 m, so the circle is widened to at least your GPS accuracy.</p>
@@ -222,9 +227,9 @@ dialog::backdrop { background: rgba(0,0,0,0.45); }
     <p>Height is the surface model (the top of everything) minus the ground model (the bare earth under it), both from the same flight, on a 1 m grid. Things that are clearly power lines or pylons are left out: a cell far above everything round it and too narrow to be a crown. Buildings are not left out, so a tap on a roof gives the roof.</p>
     <p>The 1 m grid can clip the very tip of a narrow, pointed crown (a young conifer, a cabbage tree), so the true top may be a metre or two higher. Heights are for the date the survey was flown; a tree may have grown since. When more than one survey covers the spot, the newest is used; the line under the result says when it was flown and whose it is.</p>
     <h3>Data used</h3>
-    <p>Nothing is downloaded until you tap. Then howtall reads just the 1 m cells around the spot from LINZ's Cloud-Optimised GeoTIFFs, in blocks of 512 × 512 m: about 0.75 MB a tap for a small circle, about 2.5 MB for a 200 m circle, more where it straddles block edges. Blocks are kept, so tapping again nearby downloads nothing.</p>
+    <p>Nothing is downloaded until you tap. Then HowTall? reads just the 1 m cells around the spot from LINZ's Cloud-Optimised GeoTIFFs, in blocks of 512 × 512 m: about 0.75 MB a tap for a small circle, about 2.5 MB for a 200 m circle, more where it straddles block edges. Blocks are kept, so tapping again nearby downloads nothing.</p>
     <h3>Sources</h3>
-    <p>LiDAR: <a href="https://registry.opendata.aws/nz-elevation/" target="_blank" rel="noopener">nz-elevation</a>, published by Toitū Te Whenua Land Information New Zealand, CC BY 4.0. Each survey has its own licensor, often a regional council, named under the result and on the map. Maps: Esri World Imagery and World Hillshade; NZ Topo50 from Toitū Te Whenua LINZ (CC BY 4.0); <a href="https://opentopomap.org/about" target="_blank" rel="noopener">OpenTopoMap</a> (CC-BY-SA). howtall's code is PolyForm Strict 1.0.0 and its own words and images CC BY-NC-ND 4.0 (<a href="https://github.com/rutherfordecology/howtall/blob/main/LICENSE" target="_blank" rel="noopener">licence</a>). Built by <a href="https://www.rutherfordecology.co.nz/" target="_blank" rel="noopener">Rutherford Ecology</a> from the LiDAR tab of inferrd.</p>
+    <p>LiDAR: <a href="https://registry.opendata.aws/nz-elevation/" target="_blank" rel="noopener">nz-elevation</a>, published by Toitū Te Whenua Land Information New Zealand, CC BY 4.0. Each survey has its own licensor, often a regional council, named under the result and on the map. Maps: Esri World Imagery and World Hillshade; NZ Topo50 from Toitū Te Whenua LINZ (CC BY 4.0); <a href="https://opentopomap.org/about" target="_blank" rel="noopener">OpenTopoMap</a> (CC-BY-SA). The code of HowTall? is PolyForm Strict 1.0.0, and its own words and images CC BY-NC-ND 4.0 (<a href="https://github.com/rutherfordecology/howtall/blob/main/LICENSE" target="_blank" rel="noopener">licence</a>). Built by <a href="https://www.rutherfordecology.co.nz/" target="_blank" rel="noopener">Rutherford Ecology</a> from the LiDAR tab of inferrd.</p>
     <p>Useful? <a href="https://buymeacoffee.com/rutherfordecology" target="_blank" rel="noopener">Buy me a coffee</a>.</p>
     <p id="aboutVer" style="color:var(--grey);font-size:12px;"></p>
   </div>
@@ -234,7 +239,7 @@ dialog::backdrop { background: rgba(0,0,0,0.45); }
 <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
 <script src="icons.js"></script>
 <script>
-const VERSION = '0.13.1';
+const VERSION = '0.14.0';
 document.getElementById('ver').textContent = 'v' + VERSION;
 document.getElementById('aboutVer').textContent = 'Version ' + VERSION;
 
@@ -854,7 +859,7 @@ function findMe() {
     // 1: this site isn't allowed (on some phones also what Location being off looks like);
     // 2: no position to be had, usually Location off; 3: timed out, ditto.
     setStatus(err.code === 1
-      ? 'howtall isn\'t allowed to use your location. Allow it for this site in the browser (the icon by the address), and check Location (GPS) is on in your phone\'s settings. Or just tap the map.'
+      ? 'HowTall? isn\'t allowed to use your location. Allow it for this site in the browser (the icon by the address), and check Location (GPS) is on in your phone\'s settings. Or just tap the map.'
       : LOC_OFF, true);
   }, { enableHighAccuracy: true, timeout: 15000, maximumAge: 10000 });
 }
@@ -881,7 +886,7 @@ async function measure(lon, lat, kind, acc) {
   map.closeTooltip(tapTip);
   lastTops = null;
   if (lon < NZ_BBOX[0] || lon > NZ_BBOX[2] || lat < NZ_BBOX[1] || lat > NZ_BBOX[3]) {
-    setStatus('No LiDAR here. howtall uses LINZ\'s LiDAR, which covers New Zealand only.', true); return;
+    setStatus('No LiDAR here. HowTall? uses LINZ\'s LiDAR, which covers New Zealand only.', true); return;
   }
   // The circle; from GPS, at least as wide as the GPS could be out.
   const reach = kind === 'gps' ? Math.min(R_MAX, Math.max(radius, Math.ceil(acc || 0))) : radius;

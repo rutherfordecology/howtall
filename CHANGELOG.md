@@ -1,5 +1,10 @@
 # Changelog
 
+## 0.14.0 — 2026-11-15
+
+- The app is named HowTall? everywhere it shows: header, page title, installed-app name, About, messages and README. The address and repo stay howtall.
+- The opening box starts "Welcome to HowTall?, by Rutherford ecology", with "How accurate are these heights?" as a smaller heading under it.
+
 ## 0.13.1 — 2026-11-15
 
 - The opening caution is now "How accurate are these heights?" and says what the evidence supports: for most trees, within about half a metre of a measured height, often closer. It names where heights can be further out: steep slopes (measured from the ground under the treetop, so a tree leaning downhill can read a metre or more tall), bluffs and cliff edges (false trees), narrow pointed crowns (tips missed, so a little short) and old surveys (the year is under each result). "Don't show this again" is reset so everyone sees the new wording once.

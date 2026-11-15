@@ -1,4 +1,4 @@
-# howtall
+# HowTall?
 
 Tap a tree in New Zealand and get its height from LINZ LiDAR. Built for a phone.
 
