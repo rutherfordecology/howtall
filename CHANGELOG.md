@@ -1,5 +1,10 @@
 # Changelog
 
+## 0.7.0 — 2026-11-15
+
+- Topo map as a third option beside Aerial and Ground: OpenTopoMap (the same topo layer as occurd.), with the tree heights coloured on top, a little more see-through than on the aerial so the contours and tracks show. It has detail to zoom 17; closer in it's enlarged. The choice is remembered.
+- On a phone the Aerial/Ground/Topo buttons sit under the ? button so the header fits the screen.
+
 ## 0.6.0 — 2026-11-15
 
 - One dot per tree, not a cluster per crown. Two tops count as separate trees only if the canopy dips between them by at least 2 m, or a quarter of the shorter tree's height (whichever is more), and rises again; tops closer than 2 m are always one tree. A dense 50 m forest circle went from 135 dots to 51.
