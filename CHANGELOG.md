@@ -1,5 +1,10 @@
 # Changelog
 
+## 0.3.1 — 2026-11-15
+
+- New address: howtall.rutherfordecology.co.nz (the github.io address redirects).
+- Apps menu links Rightree and Soundabouts at their new rutherfordecology.co.nz addresses.
+
 ## 0.3.0 — 2026-11-15
 
 - Rutherford Ecology branding: "by Rutherford ecology" under the app name opens a menu with the Rutherford Ecology website and links to the other apps.
