@@ -193,15 +193,15 @@ dialog::backdrop { background: rgba(0,0,0,0.45); }
 
 <dialog id="caution">
   <div class="about">
-    <h2>Rough guide, not gospel</h2>
-    <p>howtall's heights come straight from LiDAR, and they're usually within a metre or two. They can be further out:</p>
+    <h2>How accurate are these heights?</h2>
+    <p>howtall reads heights straight from LINZ's LiDAR surveys. For most trees they're within about half a metre of a measured height, and often closer. They can be further out:</p>
     <ul class="caution-list">
-      <li>on steep slopes, where a tree leaning downhill reads a few metres tall</li>
-      <li>at bluffs and cliff edges, which can show up as trees that aren't there</li>
-      <li>where the survey is a few years old: trees grow, and some get felled</li>
-      <li>on narrow, pointed crowns, whose very tips the 1&nbsp;m grid can miss</li>
+      <li><strong>Steep slopes:</strong> height is measured from the ground directly under the treetop. A tree leaning downhill can read a metre or more taller than measured from its base.</li>
+      <li><strong>Bluffs and cliff edges:</strong> these can show up as trees that aren't there.</li>
+      <li><strong>Narrow, pointed crowns:</strong> the laser can miss the very tip, so young conifers and cabbage trees may read a little short.</li>
+      <li><strong>Old surveys:</strong> heights are for the date the survey was flown. Trees grow, and some are felled since. The year is shown under each result.</li>
     </ul>
-    <p>Use it for interest and a first look. Where a height matters, measure it on the ground.</p>
+    <p>Where an exact height matters, check it on the ground.</p>
   </div>
   <div class="about-foot caution-foot">
     <label class="caution-skip"><input type="checkbox" id="cautionSkip"> Don't show this again</label>
@@ -234,7 +234,7 @@ dialog::backdrop { background: rgba(0,0,0,0.45); }
 <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
 <script src="icons.js"></script>
 <script>
-const VERSION = '0.13.0';
+const VERSION = '0.13.1';
 document.getElementById('ver').textContent = 'v' + VERSION;
 document.getElementById('aboutVer').textContent = 'Version ' + VERSION;
 
@@ -761,7 +761,7 @@ document.querySelectorAll('.look button').forEach(b => b.addEventListener('click
 $('aboutBtn').addEventListener('click', () => $('about').showModal());
 $('aboutClose').addEventListener('click', () => $('about').close());
 // A caution on opening, until "Don't show this again" is ticked.
-const CAUTION_KEY = 'howtall.cautionSeen.v1';
+const CAUTION_KEY = 'howtall.cautionSeen.v2'; // v2: new wording, shown once more to everyone
 $('cautionOk').addEventListener('click', () => {
   if ($('cautionSkip').checked) { try { localStorage.setItem(CAUTION_KEY, '1'); } catch (e) {} }
   $('caution').close();

@@ -1,5 +1,9 @@
 # Changelog
 
+## 0.13.1 — 2026-11-15
+
+- The opening caution is now "How accurate are these heights?" and says what the evidence supports: for most trees, within about half a metre of a measured height, often closer. It names where heights can be further out: steep slopes (measured from the ground under the treetop, so a tree leaning downhill can read a metre or more tall), bluffs and cliff edges (false trees), narrow pointed crowns (tips missed, so a little short) and old surveys (the year is under each result). "Don't show this again" is reset so everyone sees the new wording once.
+
 ## 0.13.0 — 2026-11-15
 
 - A caution on opening: "Rough guide, not gospel". Heights are usually within a metre or two, but can be further out on steep slopes (trees leaning downhill read tall), at bluffs and cliff edges (false trees), where the survey is a few years old, and on narrow pointed crowns. Measure on the ground where a height matters. It shows each time until "Don't show this again" is ticked; plain OK shows it again next time.
