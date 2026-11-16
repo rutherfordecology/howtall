@@ -89,6 +89,26 @@ button.bmc { border: 0; background: none; font-family: var(--font); cursor: poin
 .dl .btn { min-height: 36px; font-size: 13.5px; }
 #map.drawing { cursor: crosshair; }
 .vtx { background: #fff; border: 2px solid var(--pin); border-radius: 50%; }
+.marks { border-top: 1px solid var(--rule); margin-top: 6px; padding-top: 6px; font-size: 13.5px; flex-shrink: 0; }
+.marks summary { cursor: pointer; font-weight: 600; padding: 2px 0; }
+.marks[open] .mk-list { max-height: 26vh; overflow-y: auto; margin-top: 4px; }
+.mk-row { display: flex; border-bottom: 1px solid var(--rule); }
+.mk-go { flex: 1; display: flex; justify-content: space-between; gap: 8px; border: 0; background: none; color: var(--text); font: 500 13px var(--font); padding: 5px 2px; cursor: pointer; text-align: left; min-width: 0; }
+.mk-go span:first-child { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.mk-go span:last-child { color: var(--grey); font-variant-numeric: tabular-nums; flex-shrink: 0; }
+.mk-go:hover { background: var(--wash); }
+.mk-x { border: 0; background: none; color: var(--grey); font-size: 17px; width: 28px; cursor: pointer; }
+.mk-x:hover { color: #b3261e; }
+.tree-label.mark { background: #fff; color: #111; border-left: 3px solid var(--pin); font-weight: 600; }
+.mark-popup .leaflet-popup-content { margin: 10px 12px; font-family: var(--font); }
+.mark-popup .leaflet-popup-content-wrapper { border-radius: 0; }
+.mp-h { font-size: 14px; } .mp-h b { font-size: 18px; }
+.mp-sub { font-size: 12px; color: #5f6b66; margin: 2px 0 8px; }
+.mp-l { display: flex; flex-direction: column; gap: 3px; font-size: 12px; color: #5f6b66; }
+.mp-l input { font: 14px var(--font); padding: 6px 8px; border: 1px solid #bbb; color: #111; }
+.mp-b { display: flex; gap: 6px; margin-top: 8px; }
+.mp-b .btn { min-height: 34px; font-size: 13.5px; }
+.mark-popup .btn.ghost { background: #eef0ef; color: #111; }
 .result { overflow-y: auto; min-height: 0; }
 .result:empty { display: none; }
 .hint { color: var(--grey); font-size: 14px; line-height: 1.35; padding: 2px 0 8px; }
@@ -204,7 +224,13 @@ dialog::backdrop { background: rgba(0,0,0,0.45); }
       <button class="btn ghost" type="button" id="areaClear">Clear</button>
     </div>
   </div>
-  <div class="result" id="result"><div class="hint">Click the map to read the circle round that spot, or choose Draw an area and draw round a block. Clicking a tree's dot afterwards shows its height.</div></div>
+  <div class="result" id="result"><div class="hint">Click the map to read the circle round that spot, or choose Draw an area and draw round a block. Afterwards, click a tree's dot (or right-click any tree in the area) for its height, and to mark and name it.</div></div>
+  <details class="marks" id="marksBox" hidden>
+    <summary>Marked trees (<span id="marksN">0</span>)</summary>
+    <div class="mk-list" id="marksList"></div>
+    <div class="dl"><button class="btn ghost" type="button" id="marksCsv"><span data-icon="download" data-icon-size="15"></span>Marked trees (CSV)</button></div>
+    <div class="survey">Kept in this browser only. Download them to keep a copy or use them elsewhere.</div>
+  </details>
   <div class="foot"><button class="bmc" id="aboutBtn" type="button" aria-haspopup="dialog"><span data-icon="info" data-icon-size="15"></span>About</button><a class="bmc" href="https://buymeacoffee.com/rutherfordecology" target="_blank" rel="noopener"><span data-icon="coffee" data-icon-size="15"></span>Buy me a coffee</a></div>
 </div>
 
@@ -263,6 +289,7 @@ dialog::backdrop { background: rgba(0,0,0,0.45); }
     <p><strong>Circle</strong>: click the map and HowTall? reads a circle round the spot, 10 to 500 m radius (up to about 78 ha). <strong>Draw an area</strong>: click round a block to put down its corners, up to 100 ha, and finish with a double-click or by clicking the first corner.</p>
     <p>You get the tallest tree, the number of separate trees over 5 m, the ten tallest (click one to go to it), how much of the area is in each height class, and its mean canopy height. The tallest tree is marked pink, the other tall tops green, and trees that stand out get a small dot: one that rises at least 3 m (or a tenth of its height) above the canopy round it, like an emergent over the forest or a lone tree in a paddock. Click a dot to see its height. Two tops count as separate trees only if the canopy dips between them by at least 2 m, or a quarter of the shorter tree's height, so the bumps on one broad crown count once.</p>
     <p><strong>Tall trees pink</strong>, under the result, colours the tallest of the canopy pink and the rest in muted greens, so the tall trees jump out (as inferrd's Emergents). Pink starts at the tallest 10% of the cover over 2 m; the slider sets your own height, which then holds for every area until Auto.</p>
+    <p><strong>Marking trees</strong>: click a tree's dot, or right-click any tree in the area read, and give it a name. Marked trees stay on the map with their names, are listed in the panel (click one to go to it, rename it or unmark it), and their names go into the CSVs. <strong>Marked trees (CSV)</strong> downloads just them. Marks are kept in this browser only, so they won't show on another computer or if the browser's site data is cleared: download them to keep a copy.</p>
     <p><strong>All trees (CSV)</strong> gives every tree over 5 m in the area; <strong>Tall trees only (CSV)</strong> only those at or over the pink height. Each row has the tree's height, how far it rises above the canopy round it, the ground under it, and where it is: NZTM2000 easting and northing (EPSG:2193, the middle of the 1 m cell holding its top) and latitude/longitude. The tree count is from the LiDAR's crown tops, so trees under a taller canopy are missed and a big spreading crown can count as two.</p>
     <p>Where an area is covered by more than one survey, the newest is used, and the gaps it leaves are filled from older ones; the line under the result names each survey used.</p>
     <h3>Aerial, Ground and Topo</h3>
@@ -283,7 +310,7 @@ dialog::backdrop { background: rgba(0,0,0,0.45); }
 <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
 <script src="../icons.js"></script>
 <script>
-const VERSION = '0.16.0';
+const VERSION = '0.17.0';
 document.getElementById('ver').textContent = 'v' + VERSION;
 document.getElementById('aboutVer').textContent = 'Version ' + VERSION;
 
@@ -1092,15 +1119,23 @@ function treeNear(pt) {
   }
   return best;
 }
+// A tree picked from the map or the list: its height in a popup, with a
+// box to mark and name it.
 function pickTree(i) {
-  const p = lastTops[0], [u, w] = cellXY(p, i);
-  tapTip.setLatLng(ll(u, w)).setContent(fmtM(p.h[i]) + ' m');
-  map.openTooltip(tapTip);
-  // The tree's own label gives way to the picked one; the tree picked
-  // before gets its label back.
+  const p = lastTops[0];
+  // The tree's own label gives way to the popup; the tree picked before
+  // gets its label back.
   if (pickedI !== i && labelMarks.has(pickedI)) labelMarks.get(pickedI).openTooltip();
   pickedI = i;
   if (labelMarks.has(i)) labelMarks.get(i).closeTooltip();
+  markPopup(treeInfo(p, i));
+}
+// A tree's details from the patch, for a mark.
+function treeInfo(p, i) {
+  const [x, y] = cellXY(p, i), u = p.used[p.src[i]], s = u ? u.survey : p.survey;
+  let rise = NaN;
+  if (lastResult && lastResult.p === p) { const k = lastResult.st.trees.indexOf(i); if (k >= 0) rise = Math.max(0, lastResult.st.rise[k]); }
+  return { x, y, h: +p.h[i].toFixed(1), ground: +p.dem[i].toFixed(1), rise: rise === rise ? +rise.toFixed(1) : null, survey: s.name, flown: flownText(s) };
 }
 map.on('click', (e) => {
   if (mode === 'area' && drawPts) {
@@ -1115,6 +1150,7 @@ map.on('click', (e) => {
     drawPts.push(e.latlng); redrawDraft();
     return;
   }
+  if (Date.now() - popupClosedAt < 300 || (map._popup && map._popup.isOpen())) return; // a click off a popup just closes it
   const i = treeNear(e.containerPoint);
   if (i >= 0) { pickTree(i); return; }
   if (mode === 'area') { startDrawing(); drawPts.push(e.latlng); redrawDraft(); return; }
@@ -1301,7 +1337,7 @@ async function show(p, rg, info) {
   if (!isArea) L.circle(ll(rg.cx, rg.cy), { radius: rg.r, color: '#fff', weight: 1.5, dashArray: '4 4', fill: false, interactive: false }).addTo(marks);
   const tops = st.tops.filter(i => h[i] >= 5);
   drawTops(p, main >= 0 && h[main] >= 0.5 ? main : -1, tops.filter(i => i !== main), st.standouts);
-  lastResult = { p, st, info };
+  lastResult = { p, st, info, mask };
 
   const top = main >= 0 ? h[main] : NaN;
   const ha = st.n / 1e4;
@@ -1367,22 +1403,116 @@ function downloadCsv(pinkOnly) {
   if (!lastResult) return;
   const { p, st } = lastResult;
   const cut = pinkOnly ? pinkCut(st.fine).from : 0;
-  const rows = [['tree', 'height_m', 'rises_above_canopy_m', 'stands_out', 'ground_m', 'nztm2000_easting', 'nztm2000_northing', 'latitude', 'longitude', 'survey', 'flown']];
+  const rows = [['tree', 'name', 'height_m', 'rises_above_canopy_m', 'stands_out', 'ground_m', 'nztm2000_easting', 'nztm2000_northing', 'latitude', 'longitude', 'survey', 'flown']];
   const out = new Set(st.standouts);
   st.trees.forEach((i, k) => {
     if (p.h[i] < cut) return;
     const [x, y] = cellXY(p, i), [lon, lat] = toLonLat(x, y), s = p.used[p.src[i]] ? p.used[p.src[i]].survey : p.survey;
-    rows.push([k + 1, p.h[i].toFixed(1), Math.max(0, st.rise[k]).toFixed(1), out.has(i) ? 'yes' : 'no', p.dem[i].toFixed(1), x.toFixed(1), y.toFixed(1), lat.toFixed(7), lon.toFixed(7), s.name, flownText(s)]);
+    const mk = markAt(x, y);
+    rows.push([k + 1, mk ? mk.name : '', p.h[i].toFixed(1), Math.max(0, st.rise[k]).toFixed(1), out.has(i) ? 'yes' : 'no', p.dem[i].toFixed(1), x.toFixed(1), y.toFixed(1), lat.toFixed(7), lon.toFixed(7), s.name, flownText(s)]);
   });
   if (pinkOnly && rows.length === 1) { alert('No trees reach the pink cut-off here.'); return; }
+  saveCsv(rows, 'howtall-' + (pinkOnly ? 'tall-trees-' + fmtM(cut) + 'm-' : 'trees-') + new Date().toISOString().slice(0, 10) + '.csv');
+}
+function saveCsv(rows, name) {
   const csv = rows.map(r => r.map(v => /[",\n]/.test(String(v)) ? '"' + String(v).replace(/"/g, '""') + '"' : v).join(',')).join('\r\n');
   const a = document.createElement('a');
   // The byte-order mark lets Excel read macrons and dashes in survey names.
   a.href = URL.createObjectURL(new Blob(['﻿' + csv], { type: 'text/csv;charset=utf-8' }));
-  a.download = 'howtall-' + (pinkOnly ? 'tall-trees-' + fmtM(cut) + 'm-' : 'trees-') + new Date().toISOString().slice(0, 10) + '.csv';
+  a.download = name;
   document.body.appendChild(a); a.click(); a.remove();
   setTimeout(() => URL.revokeObjectURL(a.href), 1000);
 }
+
+/* ---------- marked trees ----------
+   Any tree can be marked and named: click its dot (or right-click a tree
+   in the area read) and give it a name. Marks are kept in this browser
+   (localStorage), shown on the map with their names wherever you look,
+   listed in the panel, and go into the CSVs by name. */
+const MARKS_KEY = 'howtall.web.marks.v1';
+let treeMarks = [];
+try { const v = JSON.parse(localStorage.getItem(MARKS_KEY) || '[]'); if (Array.isArray(v)) treeMarks = v.filter(m => m && isFinite(m.x) && isFinite(m.y)); } catch (e) {}
+let marksSaved = true;
+function saveMarks() {
+  try { localStorage.setItem(MARKS_KEY, JSON.stringify(treeMarks)); marksSaved = true; } catch (e) { marksSaved = false; }
+  drawMarks(); listMarks();
+}
+// The mark on the tree at NZTM x, y (the same 1 m cell, give or take).
+const markAt = (x, y) => treeMarks.find(m => Math.abs(m.x - x) < 1.5 && Math.abs(m.y - y) < 1.5) || null;
+map.createPane('marks'); map.getPane('marks').style.zIndex = 640;
+const marksLayer = L.layerGroup().addTo(map);
+let popupClosedAt = 0;
+map.on('popupclose', () => {
+  popupClosedAt = Date.now();
+  if (labelMarks.has(pickedI)) labelMarks.get(pickedI).openTooltip();
+  pickedI = -1;
+});
+function drawMarks() {
+  marksLayer.clearLayers();
+  for (const m of treeMarks) {
+    const mk = L.circleMarker(ll(m.x, m.y), { pane: 'marks', radius: 7, color: '#ff1f9e', weight: 3, fillColor: '#fff', fillOpacity: 1 })
+      .bindTooltip(esc(m.name) + ' · ' + fmtM(m.h, 0) + ' m', { permanent: true, direction: 'right', offset: [9, 0], className: 'tree-label mark', pane: 'marks' });
+    mk.on('click', (e) => { L.DomEvent.stopPropagation(e); markPopup(m); });
+    mk.addTo(marksLayer);
+  }
+}
+// The popup for a tree: its height, and a name box to mark it, rename
+// it or take the mark off. t: a mark, or a tree's details from treeInfo.
+function markPopup(t) {
+  const m = markAt(t.x, t.y), d = m || t;
+  const el = document.createElement('div');
+  el.className = 'mark-pop';
+  el.innerHTML = '<div class="mp-h"><b>' + fmtM(d.h) + ' m</b> tall' + (d.rise != null ? ', ' + fmtM(d.rise) + ' m above the canopy round it' : '') + '</div>' +
+    '<div class="mp-sub">Ground ' + fmtM(d.ground, 0) + ' m · E ' + d.x.toFixed(1) + ' N ' + d.y.toFixed(1) + ' (NZTM2000)</div>' +
+    '<label class="mp-l">Name<input type="text" maxlength="80" placeholder="e.g. Big rimu by the track"></label>' +
+    '<div class="mp-b"><button type="button" class="btn mp-save">' + (m ? 'Rename' : 'Mark this tree') + '</button>' + (m ? '<button type="button" class="btn ghost mp-del">Unmark</button>' : '') + '</div>';
+  const input = el.querySelector('input');
+  input.value = m ? m.name : '';
+  const save = () => {
+    const name = input.value.trim() || 'Tree ' + (treeMarks.length + 1);
+    if (m) m.name = name;
+    else treeMarks.push({ id: Date.now().toString(36), name, x: t.x, y: t.y, h: t.h, ground: t.ground, rise: t.rise, survey: t.survey, flown: t.flown, at: new Date().toISOString().slice(0, 10) });
+    saveMarks(); map.closePopup();
+  };
+  el.querySelector('.mp-save').addEventListener('click', save);
+  input.addEventListener('keydown', (e) => { if (e.key === 'Enter') save(); e.stopPropagation(); });
+  if (m) el.querySelector('.mp-del').addEventListener('click', () => { treeMarks = treeMarks.filter(q => q !== m); saveMarks(); map.closePopup(); });
+  L.DomEvent.disableClickPropagation(el);
+  L.popup({ offset: [0, -4], maxWidth: 280, className: 'mark-popup' }).setLatLng(ll(t.x, t.y)).setContent(el).openOn(map);
+  setTimeout(() => input.focus(), 50);
+}
+// Right-click a tree in the area read: the highest top within 3 m of it.
+map.on('contextmenu', (e) => {
+  if (!lastResult || drawPts) return;
+  const { p, mask } = lastResult, [x, y] = toNztm(e.latlng.lng, e.latlng.lat);
+  const c = cellAt(p, x, y);
+  if (c < 0 || !mask[c]) return;
+  const i = topNear(p, x, y, TREE_REACH_M);
+  if (i >= 0 && p.h[i] >= 2) pickTree(i);
+});
+// The list in the panel.
+function listMarks() {
+  const box = $('marksBox');
+  box.hidden = !treeMarks.length;
+  $('marksN').textContent = treeMarks.length;
+  $('marksList').innerHTML = treeMarks.map((m, k) => '<div class="mk-row"><button type="button" class="mk-go" data-k="' + k + '"><span>' + esc(m.name) + '</span><span>' + fmtM(m.h) + ' m</span></button>' +
+    '<button type="button" class="mk-x" data-x="' + k + '" title="Unmark" aria-label="Unmark ' + esc(m.name) + '">×</button></div>').join('') +
+    (marksSaved ? '' : '<div class="survey" style="color:#b3261e">This browser isn\'t keeping the marks; download them before you close the page.</div>');
+}
+$('marksList').addEventListener('click', (e) => {
+  const go = e.target.closest('.mk-go'), x = e.target.closest('.mk-x');
+  if (go) { const m = treeMarks[Number(go.dataset.k)]; map.setView(ll(m.x, m.y), Math.max(map.getZoom(), 18)); markPopup(m); }
+  if (x) { const m = treeMarks[Number(x.dataset.x)]; if (confirm('Unmark ' + m.name + '?')) { treeMarks.splice(Number(x.dataset.x), 1); saveMarks(); } }
+});
+$('marksCsv').addEventListener('click', () => {
+  const rows = [['name', 'height_m', 'rises_above_canopy_m', 'ground_m', 'nztm2000_easting', 'nztm2000_northing', 'latitude', 'longitude', 'survey', 'flown', 'marked_on']];
+  treeMarks.forEach(m => {
+    const [lon, lat] = toLonLat(m.x, m.y);
+    rows.push([m.name, fmtM(m.h), m.rise != null ? fmtM(m.rise) : '', fmtM(m.ground), m.x.toFixed(1), m.y.toFixed(1), lat.toFixed(7), lon.toFixed(7), m.survey || '', m.flown || '', m.at || '']);
+  });
+  saveCsv(rows, 'howtall-marked-trees-' + new Date().toISOString().slice(0, 10) + '.csv');
+});
+libs.then(() => { drawMarks(); listMarks(); });
 setMode(mode);
 </script>
 </body>

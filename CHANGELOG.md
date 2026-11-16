@@ -1,5 +1,11 @@
 # Changelog
 
+## 0.17.0 — 2026-11-16
+
+- HowTall? web: mark and name trees. Click a tree's dot, or right-click any tree in the area read, for a popup with its height, rise above the canopy, ground and NZTM2000 position, and a name box. Marked trees show on the map with their names wherever you look, and are listed in the panel under Marked trees: click one to go to it and rename or unmark it.
+- Names go into the tree CSVs (a new name column), and Marked trees (CSV) downloads just the marked ones: name, height, rise, ground, NZTM2000 easting and northing, latitude and longitude, survey and date marked.
+- Marks are kept in this browser (not sent anywhere); the panel says so.
+
 ## 0.16.0 — 2026-11-16
 
 - HowTall? web: Tall trees pink, as inferrd's Emergents. Under the result, switch the colours from Heights to Tall trees pink: the canopy is muted greens up to a cut-off height and pink at or over it. The cut-off starts at the tallest 10% of the cover over 2 m; a slider sets your own (then kept for every area until Auto). It says how many trees reach it.
