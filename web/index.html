@@ -146,7 +146,11 @@ button.bmc { border: 0; background: none; font-family: var(--font); cursor: poin
 .legend .scheme { margin-bottom: 6px; }
 .legend .scheme button { flex: 1; min-height: 32px; font-size: 13px; }
 .pink-row { display: flex; align-items: center; gap: 8px; font-size: 13px; padding-top: 6px; }
-.pink-row input { flex: 1; accent-color: var(--pin); }
+/* The track matches the map: muted green below the cut-off, pink from it up. */
+.pink-row input { flex: 1; -webkit-appearance: none; appearance: none; height: 6px; margin: 0; background: linear-gradient(90deg, #9aae85 0, #9aae85 var(--p, 50%), #ff1f9e var(--p, 50%), #ff1f9e 100%); cursor: pointer; }
+.pink-row input::-webkit-slider-thumb { -webkit-appearance: none; width: 18px; height: 18px; border-radius: 50%; background: #fff; border: 3px solid #ff1f9e; box-shadow: 0 1px 3px rgba(0,0,0,0.35); }
+.pink-row input::-moz-range-thumb { width: 12px; height: 12px; border-radius: 50%; background: #fff; border: 3px solid #ff1f9e; box-shadow: 0 1px 3px rgba(0,0,0,0.35); }
+.pink-row input::-moz-range-track { background: transparent; }
 .pink-auto:disabled { opacity: 0.45; cursor: default; }
 .legend .ramp.grey { background: linear-gradient(90deg, #282828, #f5f5f5); }
 .legend .ticks span:only-child { white-space: normal; }
@@ -310,7 +314,7 @@ dialog::backdrop { background: rgba(0,0,0,0.45); }
 <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
 <script src="../icons.js"></script>
 <script>
-const VERSION = '0.17.0';
+const VERSION = '0.17.1';
 document.getElementById('ver').textContent = 'v' + VERSION;
 document.getElementById('aboutVer').textContent = 'Version ' + VERSION;
 
@@ -1071,7 +1075,7 @@ function legendHtml() {
   const top = lastResult && lastResult.st.trees.length ? lastResult.p.h[lastResult.st.trees[0]] : 60;
   const max = Math.max(3, Math.ceil(top)), val = isFinite(c.from) ? Math.min(max, c.from) : max;
   return sw + '<div class="ramp tall"></div><div class="ticks"><span>0</span><span>' + (isFinite(c.from) ? fmtM(c.from) + ' m +' : '') + '</span></div>' +
-    '<div class="pink-row"><label for="pinkSlider">Pink from</label><input type="range" id="pinkSlider" min="2" max="' + max + '" step="0.5" value="' + val + '">' +
+    '<div class="pink-row"><label for="pinkSlider">Pink from</label><input type="range" id="pinkSlider" min="2" max="' + max + '" step="0.5" value="' + val + '" style="--p:' + (100 * (val - 2) / Math.max(1, max - 2)).toFixed(1) + '%">' +
     '<button type="button" class="bmc pink-auto" id="pinkAuto"' + (c.auto ? ' disabled' : '') + '>Auto</button></div>' +
     '<div class="survey" id="pinkText">' + esc(pinkText(c)) + '</div>';
 }
@@ -1090,6 +1094,7 @@ $('result').addEventListener('click', (e) => {
 $('result').addEventListener('input', (e) => {
   if (e.target.id !== 'pinkSlider') return;
   pinkM = Number(e.target.value);
+  const sl = e.target; sl.style.setProperty('--p', (100 * (sl.value - sl.min) / Math.max(1, sl.max - sl.min)).toFixed(1) + '%');
   if (lastResult) $('pinkText').textContent = pinkText(pinkCut(lastResult.st.fine));
   $('pinkAuto').disabled = false;
   clearTimeout(pinkTimer); pinkTimer = setTimeout(redrawColours, 120);

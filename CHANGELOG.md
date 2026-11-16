@@ -1,5 +1,9 @@
 # Changelog
 
+## 0.17.1 — 2026-11-16
+
+- HowTall? web: the Pink from slider had its pink on the wrong side (below the handle). Its track is now muted green below the handle and pink above it, as the map colours trees.
+
 ## 0.17.0 — 2026-11-16
 
 - HowTall? web: mark and name trees. Click a tree's dot, or right-click any tree in the area read, for a popup with its height, rise above the canopy, ground and NZTM2000 position, and a name box. Marked trees show on the map with their names wherever you look, and are listed in the panel under Marked trees: click one to go to it and rename or unmark it.
