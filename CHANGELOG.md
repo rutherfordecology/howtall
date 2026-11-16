@@ -1,5 +1,13 @@
 # Changelog
 
+## 0.15.0 — 2026-11-16
+
+- New: HowTall? web, at /web/, for a computer. It reads a whole block, not just a tap: a circle of 10 to 500 m radius (up to about 78 ha), or an area you draw by clicking its corners, up to 100 ha. Double-click or click the first corner to finish; Backspace takes a corner off, Esc stops.
+- For the area it gives the tallest tree, the number of trees over 5 m (and per hectare), cover over 2 m, mean canopy height, the share of the area in each height class, and the ten tallest trees (click one to go to it).
+- Download trees (CSV): every tree over 5 m with its height, the ground under it, whether it stands out, NZTM and latitude/longitude, and the survey.
+- Where the newest survey leaves gaps in the area, up to two older surveys fill them; each survey used is named, with its share of the area.
+- The phone app is unchanged. A 100 ha area reads roughly 5 to 15 MB.
+
 ## 0.14.3 — 2026-11-16
 
 - Tapping a labelled tree shows its more exact height in place of its old label, rather than on top of it. Tapping another tree puts the first one's label back.

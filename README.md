@@ -8,6 +8,10 @@ Tap a tree in New Zealand and get its height from LINZ LiDAR. Built for a phone.
 
 Height = DSM − DEM from the same LINZ survey, 1 m grid, power lines and pylons left out (same test as inferrd's LiDAR tab). Newest survey first; older surveys covering the spot are buttons under the result.
 
+## HowTall? web
+
+`web/index.html` is a computer version (howtall.rutherfordecology.co.nz/web/): a circle up to 500 m radius, or an area drawn on the map up to 100 ha (and 2.5 km either way). It counts trees over 5 m, gives height classes and the ten tallest, and downloads every tree as CSV. Where the newest survey leaves gaps, up to two older surveys fill them. It reads the same COG blocks as the phone app (roughly 5–15 MB for 100 ha) and shares its code by copy, not by import, so a fix to the height maths needs making in both files.
+
 ## Data use
 
 Nothing is read until you tap. The 1:10k sheet tile under the point is worked out from its NZTM coordinates (no survey tile lists are downloaded), a HEAD request per nearby survey says which surveys have it, and only the COG's own 512 × 512 m blocks under the circle are read: about 0.75 MB a tap for a small circle, about 2.5 MB for a 200 m circle, more where it straddles block edges. Blocks are kept, so later taps in the same block download nothing. LINZ's catalogue (~65 KB) is cached for a week.

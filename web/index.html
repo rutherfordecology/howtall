@@ -1,0 +1,1302 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="theme-color" content="#0a3f26">
+<title>HowTall? web · Rutherford Ecology</title>
+<meta name="description" content="Tree heights over a whole block in New Zealand from LINZ LiDAR: a circle up to 500 m across or an area you draw, with every tree's height to download.">
+<link rel="icon" href="../icon.svg" type="image/svg+xml">
+<link rel="apple-touch-icon" href="../icon-192.png">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Inter+Tight:wght@400;500;600;700&display=swap">
+<link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css">
+<style>
+*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+:root {
+  --base: #0a3f26;      /* header, buttons, selection */
+  --base-2: #14633c;
+  --grey: #5f6b66;
+  --rule: #d5d9d7;
+  --bg: #fff;
+  --text: #111;
+  --wash: #eef0ef;
+  --pin: #ff1f9e;       /* the measured tree: loud against canopy greens */
+  --font: 'Inter Tight', system-ui, -apple-system, sans-serif;
+  --safe-b: env(safe-area-inset-bottom, 0px);
+  --safe-t: env(safe-area-inset-top, 0px);
+}
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) { --bg: #151a18; --text: #eef0ef; --grey: #a3ada8; --rule: #2e3633; --wash: #222a27; }
+}
+:root[data-theme="dark"] { --bg: #151a18; --text: #eef0ef; --grey: #a3ada8; --rule: #2e3633; --wash: #222a27; }
+html, body { height: 100%; overflow: hidden; }
+body { font-family: var(--font); background: var(--bg); color: var(--text); font-size: 15px; -webkit-tap-highlight-color: transparent; }
+#map { position: fixed; inset: 0; background: #20261f; }
+
+/* Top bar */
+.top { position: fixed; top: 0; left: 0; right: 0; z-index: 1000; padding: calc(var(--safe-t) + 8px) 12px 8px; display: flex; align-items: center; justify-content: space-between; pointer-events: none; }
+.brand { pointer-events: auto; background: var(--base); color: #fff; padding: 6px 11px 5px; box-shadow: 0 1px 4px rgba(0,0,0,0.3); }
+.brand-name { display: flex; align-items: center; gap: 5px; font-weight: 700; font-size: 17px; letter-spacing: -0.01em; line-height: 1.1; }
+.brand-name small { font-weight: 400; font-size: 10.5px; opacity: 0.7; margin-left: 2px; }
+.brand-by { display: flex; align-items: center; gap: 3px; border: 0; background: none; color: rgba(255,255,255,0.85); font: 300 12px var(--font); padding: 2px 0 0; cursor: pointer; }
+.brand-by strong { font-weight: 700; }
+.brand-by em { font-style: normal; font-weight: 300; }
+.foot { display: flex; justify-content: center; gap: 8px; padding: 6px 0 0; }
+button.bmc { border: 0; background: none; font-family: var(--font); cursor: pointer; }
+.bmc { display: inline-flex; align-items: center; gap: 6px; color: var(--grey); font-size: 13px; font-weight: 500; text-decoration: none; padding: 4px 8px; }
+.bmc:hover, .bmc:active { color: var(--text); }
+.icon-btn { display: grid; place-items: center; }
+.re { width: min(440px, calc(100vw - 24px)); }
+.re-head { background: var(--base); color: #fff; padding: 18px 18px 12px; text-align: center; }
+.re-head img { width: 150px; max-width: 60%; height: auto; filter: brightness(0) invert(1); opacity: 0.8; display: block; margin: 0 auto 6px; }
+.re-word { font-size: 15px; } .re-word strong { font-weight: 700; } .re-word em { font-style: normal; font-weight: 300; }
+.re-body { padding: 12px 16px 4px; overflow-y: auto; max-height: calc(100dvh - 260px); }
+.re-body h3 { font-size: 13px; color: var(--grey); font-weight: 600; margin: 14px 0 6px; }
+.re-site { display: flex; justify-content: space-between; align-items: center; padding: 12px; border: 1px solid var(--rule); color: var(--text); text-decoration: none; font-weight: 600; }
+.apps { display: grid; gap: 0; }
+.apps a { display: grid; grid-template-columns: 24px 1fr; gap: 10px; align-items: center; padding: 9px 4px; border-bottom: 1px solid var(--rule); color: var(--text); text-decoration: none; }
+.apps a > span:first-child { color: var(--base); }
+@media (prefers-color-scheme: dark) { :root:not([data-theme="light"]) .apps a > span:first-child { color: #7fc79a; } }
+.apps b { display: block; font-weight: 600; font-size: 14px; }
+.apps small { display: block; color: var(--grey); font-size: 12.5px; line-height: 1.3; }
+.re-bmc { margin: 12px auto 4px; display: flex; justify-content: center; }
+.icon-btn { pointer-events: auto; width: 40px; height: 40px; border: 0; background: var(--bg); color: var(--text); font: 600 17px var(--font); box-shadow: 0 1px 4px rgba(0,0,0,0.3); cursor: pointer; }
+
+/* Bottom panel: result card above the controls */
+.panel { position: fixed; left: 0; right: 0; bottom: 0; z-index: 1000; background: var(--bg); box-shadow: 0 -2px 10px rgba(0,0,0,0.25); padding: 10px 12px calc(var(--safe-b) + 10px); max-height: 62dvh; display: flex; flex-direction: column; }
+@media (min-width: 640px) { .panel { left: 12px; right: auto; bottom: 12px; top: 76px; width: 400px; max-height: none; } }
+.mode { margin-bottom: 8px; }
+.mode button { flex: 1; min-height: 38px; }
+.area-row { display: none; flex-direction: column; gap: 6px; padding: 2px 0 8px; font-size: 13.5px; color: var(--grey); line-height: 1.35; }
+.area-row.show { display: flex; }
+.area-row .btns { display: flex; gap: 6px; }
+.area-row .btn { min-height: 36px; font-size: 14px; }
+.btn.ghost { background: var(--wash); color: var(--text); }
+.area-row .live { font-variant-numeric: tabular-nums; color: var(--text); font-weight: 600; }
+.area-row .live.over { color: #b3261e; }
+.classes { margin: 8px 0 2px; display: grid; grid-template-columns: 64px 1fr 40px; gap: 3px 8px; align-items: center; font-size: 12.5px; }
+.classes .bar { height: 10px; background: var(--wash); }
+.classes .bar i { display: block; height: 100%; }
+.classes span:last-child, .classes .pct { text-align: right; font-variant-numeric: tabular-nums; color: var(--grey); }
+.toplist { margin: 6px 0 2px; font-size: 13px; columns: 2; column-gap: 12px; }
+.toplist button { display: flex; width: 100%; justify-content: space-between; border: 0; border-bottom: 1px solid var(--rule); background: none; color: var(--text); font: 500 13px var(--font); padding: 3px 2px; cursor: pointer; font-variant-numeric: tabular-nums; break-inside: avoid; }
+.toplist button:hover { background: var(--wash); }
+.toplist button span:first-child { color: var(--grey); }
+.sub { font-size: 13px; color: var(--grey); font-weight: 600; margin: 10px 0 2px; }
+.dl { margin-top: 10px; display: flex; gap: 6px; }
+.dl .btn { min-height: 36px; font-size: 13.5px; }
+#map.drawing { cursor: crosshair; }
+.vtx { background: #fff; border: 2px solid var(--pin); border-radius: 50%; }
+.result { overflow-y: auto; min-height: 0; }
+.result:empty { display: none; }
+.hint { color: var(--grey); font-size: 14px; line-height: 1.35; padding: 2px 0 8px; }
+.big { display: flex; align-items: baseline; gap: 8px; }
+.big .num { font-size: 32px; font-weight: 700; letter-spacing: -0.02em; line-height: 1; }
+.big .unit { font-size: 16px; font-weight: 600; }
+.big .what { color: var(--grey); font-size: 13px; line-height: 1.25; }
+.lines { margin: 8px 0 4px; display: grid; grid-template-columns: auto 1fr; gap: 3px 12px; font-size: 14px; }
+.lines dt { color: var(--grey); }
+.lines dd { font-weight: 500; font-variant-numeric: tabular-nums; }
+.survey.one { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.survey { font-size: 12.5px; color: var(--grey); margin: 6px 0 2px; line-height: 1.35; }
+.status { font-size: 14px; padding: 4px 0 8px; color: var(--grey); }
+.status.err { color: #b3261e; }
+.spin { display: inline-block; width: 12px; height: 12px; border: 2px solid var(--rule); border-top-color: var(--base); border-radius: 50%; animation: s 0.8s linear infinite; vertical-align: -1px; margin-right: 6px; }
+@keyframes s { to { transform: rotate(360deg); } }
+.legend { margin: 8px 0 2px; }
+.legend .ramp { height: 8px; background: linear-gradient(90deg, #440154 0%, #3b528b 25%, #21918c 50%, #5ec962 75%, #fde725 100%); }
+.legend .ticks { display: flex; justify-content: space-between; font-size: 11px; color: var(--grey); margin-top: 2px; }
+
+.radius { border-top: 1px solid var(--rule); margin-top: 4px; }
+.loc-btn { width: 44px; height: 44px; border: 0; background: var(--base); color: #fff; display: grid; place-items: center; cursor: pointer; box-shadow: 0 1px 4px rgba(0,0,0,0.35); }
+.loc-btn.busy { background: var(--base-2); }
+.loc-btn.busy svg { animation: s 1.6s linear infinite; }
+.btn { flex: 1; min-height: 46px; border: 0; background: var(--base); color: #fff; font: 600 15px var(--font); cursor: pointer; display: flex; align-items: center; justify-content: center; gap: 6px; }
+.btn:active { background: var(--base-2); }
+.btn:disabled { opacity: 0.5; }
+.seg { display: flex; border: 1px solid var(--base); }
+.top-right { display: flex; gap: 8px; align-items: center; pointer-events: auto; }
+.look { background: var(--bg); box-shadow: 0 1px 4px rgba(0,0,0,0.3); }
+.look button { min-height: 38px; padding: 0 12px; }
+
+#map.ground { background: #e9e7e2; }
+.legend .ramp.grey { background: linear-gradient(90deg, #282828, #f5f5f5); }
+.legend .ticks span:only-child { white-space: normal; }
+.seg button { border: 0; background: var(--bg); color: var(--text); font: 600 14px var(--font); padding: 0 14px; min-height: 44px; cursor: pointer; }
+.seg button.on { background: var(--base); color: #fff; }
+.radius { display: none; align-items: center; gap: 10px; padding: 10px 0 0; font-size: 14px; }
+.radius.show { display: flex; }
+.radius input { flex: 1; accent-color: var(--base); height: 28px; }
+.radius output { min-width: 86px; text-align: right; font-variant-numeric: tabular-nums; color: var(--grey); }
+
+/* About */
+dialog { border: 0; padding: 0; max-width: min(560px, calc(100vw - 24px)); max-height: calc(100dvh - 40px); margin: auto; background: var(--bg); color: var(--text); box-shadow: 0 6px 30px rgba(0,0,0,0.4); }
+dialog::backdrop { background: rgba(0,0,0,0.45); }
+.about { padding: 18px 18px 8px; overflow-y: auto; max-height: calc(100dvh - 100px); font-size: 14px; line-height: 1.5; }
+.about h2 { font-size: 20px; margin-bottom: 8px; }
+.about h3 { font-size: 14px; margin: 14px 0 4px; }
+.about p { margin-bottom: 8px; }
+.about a { color: inherit; }
+.welcome { margin-bottom: 0 !important; font-size: 26px !important; line-height: 1.15; }
+.welcome-to { display: block; font-size: 15px; font-weight: 400; color: var(--grey); }
+.welcome-by { font-size: 14px; font-weight: 300; color: var(--grey); margin-bottom: 14px; }
+.welcome-by strong { font-weight: 700; }
+#caution .about p, #caution .caution-list { font-size: 13px; line-height: 1.45; }
+.caution-list { margin: 0 0 8px 18px; }
+.caution-list li { margin-bottom: 3px; }
+.caution-foot { display: flex; align-items: center; justify-content: space-between; gap: 12px; }
+.caution-skip { display: flex; align-items: center; gap: 6px; font-size: 13px; color: var(--grey); cursor: pointer; }
+.caution-skip input { width: 18px; height: 18px; accent-color: var(--base); }
+.about-foot { padding: 10px 18px 16px; display: flex; justify-content: flex-end; }
+.about-foot .btn { flex: 0 0 auto; padding: 0 22px; }
+
+/* Map marks */
+.tree-label { background: var(--pin); color: #fff; font: 700 12px var(--font); padding: 1px 5px; white-space: nowrap; box-shadow: 0 1px 3px rgba(0,0,0,0.4); border: 0; }
+.tree-label.other { background: rgba(10,63,38,0.9); font-weight: 600; }
+.tree-label.picked { background: #fff; color: #111; font-size: 13px; }
+.tree-label::before { display: none; }
+.leaflet-tooltip.tree-label { border-radius: 0; }
+.leaflet-control-attribution { font-size: 10px; }
+.leaflet-bottom.leaflet-right { bottom: var(--panel-h, 0px); }
+</style>
+</head>
+<body>
+<div id="map"></div>
+
+<div class="top">
+  <div class="brand">
+    <div class="brand-name"><span data-icon="tree" data-icon-size="18"></span>HowTall? <small style="font-size:13px;opacity:.85;margin-left:0">web</small><small id="ver"></small></div>
+    <button class="brand-by" id="reBtn" type="button" aria-haspopup="dialog">by <strong>Rutherford</strong> <em>ecology</em><span data-icon="chevron-down" data-icon-size="13"></span></button>
+  </div>
+  <div class="top-right">
+    <div class="look seg" role="radiogroup" aria-label="Map">
+      <button type="button" role="radio" data-look="aerial" class="on" aria-checked="true">Aerial</button>
+      <button type="button" role="radio" data-look="ground" aria-checked="false">Ground</button>
+      <button type="button" role="radio" data-look="topo" aria-checked="false">Topo</button>
+    </div>
+  </div>
+</div>
+
+<div class="panel" id="panel">
+  <div class="mode seg" role="radiogroup" aria-label="What to read">
+    <button type="button" role="radio" data-mode="circle" class="on" aria-checked="true">Circle</button>
+    <button type="button" role="radio" data-mode="area" aria-checked="false">Draw an area</button>
+  </div>
+  <div class="radius show" id="radiusRow">
+    <label for="radius">Radius</label>
+    <input type="range" id="radius" min="10" max="500" step="10" value="100">
+    <output id="radiusOut" for="radius"></output>
+  </div>
+  <div class="area-row" id="areaRow">
+    <div id="areaHint">Click the map to put down corners. Double-click, or click the first corner, to finish. Backspace takes the last corner off; Esc stops. Up to 100 ha.</div>
+    <div class="live" id="areaLive"></div>
+    <div class="btns">
+      <button class="btn" type="button" id="areaFinish" disabled>Finish</button>
+      <button class="btn ghost" type="button" id="areaUndo" disabled>Undo corner</button>
+      <button class="btn ghost" type="button" id="areaClear">Clear</button>
+    </div>
+  </div>
+  <div class="result" id="result"><div class="hint">Click the map to read the circle round that spot, or choose Draw an area and draw round a block. Clicking a tree's dot afterwards shows its height.</div></div>
+  <div class="foot"><button class="bmc" id="aboutBtn" type="button" aria-haspopup="dialog"><span data-icon="info" data-icon-size="15"></span>About</button><a class="bmc" href="https://buymeacoffee.com/rutherfordecology" target="_blank" rel="noopener"><span data-icon="coffee" data-icon-size="15"></span>Buy me a coffee</a></div>
+</div>
+
+<dialog id="re" class="re">
+  <div class="re-head">
+    <img src="../logo.png" alt="Rutherford Ecology">
+    <div class="re-word"><strong>Rutherford</strong> <em>ecology</em></div>
+  </div>
+  <div class="re-body">
+    <a class="re-site" href="https://www.rutherfordecology.co.nz/" target="_blank" rel="noopener"><span>Rutherford Ecology website</span><span data-icon="external-link" data-icon-size="16"></span></a>
+    <h3>More apps</h3>
+    <div class="apps">
+      <a href="https://occurd.rutherfordecology.co.nz/" target="_blank" rel="noopener"><span data-icon="map-pin"></span><span><b>occurd.</b><small>Draw an area and pull every biodiversity record inside it.</small></span></a>
+      <a href="https://occurd.rutherfordecology.co.nz/but-is-it-threatened/" target="_blank" rel="noopener"><span data-icon="warning"></span><span><b>but is it threatened?</b><small>Paste a species list, get its NZ threat status back.</small></span></a>
+      <a href="https://inferrd.rutherfordecology.co.nz/" target="_blank" rel="noopener"><span data-icon="leaf"></span><span><b>inferrd.</b><small>Is the vegetation in an area changing? Satellite trends.</small></span></a>
+      <a href="https://rightree.rutherfordecology.co.nz/" target="_blank" rel="noopener"><span data-icon="tree"></span><span><b>Rightree</b><small>Which native species belong on a piece of land.</small></span></a>
+      <a href="https://occurd.rutherfordecology.co.nz/looklike/" target="_blank" rel="noopener"><span data-icon="camera"></span><span><b>LookLike</b><small>Flick through photos of a species list.</small></span></a>
+      <a href="https://occurd.rutherfordecology.co.nz/whatdat/" target="_blank" rel="noopener"><span data-icon="award"></span><span><b>WhatDat?</b><small>A photo ID quiz for any organism.</small></span></a>
+      <a href="https://rutherfordecology.github.io/WhatDatBird/" target="_blank" rel="noopener"><span data-icon="bird"></span><span><b>WhatDatBird?</b><small>A bird ID quiz.</small></span></a>
+      <a href="https://occurd.rutherfordecology.co.nz/nudis/" target="_blank" rel="noopener"><span data-icon="fish"></span><span><b>Nudis Near Me</b><small>The nudibranchs recorded near you.</small></span></a>
+      <a href="https://occurd.rutherfordecology.co.nz/lizards/" target="_blank" rel="noopener"><span data-icon="reptile"></span><span><b>Lizards Near Me</b><small>The lizards and geckos recorded near you.</small></span></a>
+      <a href="https://occurd.rutherfordecology.co.nz/oysters/" target="_blank" rel="noopener"><span data-icon="shell"></span><span><b>The World's Your Oysters</b><small>The oysters recorded near you, anywhere.</small></span></a>
+      <a href="https://occurd.rutherfordecology.co.nz/mermaids/" target="_blank" rel="noopener"><span data-icon="tail"></span><span><b>Mermaids Near Me</b><small>Everything near you mistaken for a mermaid.</small></span></a>
+      <a href="https://soundabouts.rutherfordecology.co.nz/" target="_blank" rel="noopener"><span data-icon="volume"></span><span><b>Soundabouts</b><small>Guess the country or year from its music.</small></span></a>
+    </div>
+    <a class="bmc re-bmc" href="https://buymeacoffee.com/rutherfordecology" target="_blank" rel="noopener"><span data-icon="coffee" data-icon-size="16"></span>Buy me a coffee</a>
+  </div>
+  <div class="about-foot"><button class="btn" type="button" id="reClose">Close</button></div>
+</dialog>
+
+<dialog id="caution">
+  <div class="about">
+    <h2 class="welcome"><span class="welcome-to">Welcome to</span> HowTall?</h2>
+    <div class="welcome-by">by <strong>Rutherford</strong> ecology</div>
+    <h3>How accurate are these heights?</h3>
+    <p>HowTall? reads heights straight from LINZ's LiDAR surveys. For most trees they're within about half a metre of a measured height, and often closer. They can be further out:</p>
+    <ul class="caution-list">
+      <li><strong>Steep slopes:</strong> height is measured from the ground directly under the treetop. A tree leaning downhill can read a metre or more taller than measured from its base.</li>
+      <li><strong>Bluffs and cliff edges:</strong> these can show up as trees that aren't there.</li>
+      <li><strong>Narrow, pointed crowns:</strong> the laser can miss the very tip, so young conifers and cabbage trees may read a little short.</li>
+      <li><strong>Old surveys:</strong> heights are for the date the survey was flown. Trees grow, and some are felled since. The year is shown under each result.</li>
+    </ul>
+    <p>Where an exact height matters, check it on the ground.</p>
+  </div>
+  <div class="about-foot caution-foot">
+    <label class="caution-skip"><input type="checkbox" id="cautionSkip"> Don't show this again</label>
+    <button class="btn" type="button" id="cautionOk">OK</button>
+  </div>
+</dialog>
+
+<dialog id="about">
+  <div class="about">
+    <h2>HowTall? web</h2>
+    <p>The computer version of <a href="../">HowTall?</a>: tree heights over a whole block, from the LiDAR survey of that ground, published by Toitū Te Whenua LINZ. New Zealand only, wherever LINZ has a 1 m surface model.</p>
+    <h3>Circle or drawn area</h3>
+    <p><strong>Circle</strong>: click the map and HowTall? reads a circle round the spot, 10 to 500 m radius (up to about 78 ha). <strong>Draw an area</strong>: click round a block to put down its corners, up to 100 ha, and finish with a double-click or by clicking the first corner.</p>
+    <p>You get the tallest tree, the number of separate trees over 5 m, the ten tallest (click one to go to it), how much of the area is in each height class, and its mean canopy height. The tallest tree is marked pink, the other tall tops green, and trees that stand out get a small dot: one that rises at least 3 m (or a tenth of its height) above the canopy round it, like an emergent over the forest or a lone tree in a paddock. Click a dot to see its height. Two tops count as separate trees only if the canopy dips between them by at least 2 m, or a quarter of the shorter tree's height, so the bumps on one broad crown count once.</p>
+    <p><strong>Download trees (CSV)</strong> gives every tree over 5 m in the area: its height, the ground under it, and where it is (NZTM and latitude/longitude). The tree count is from the LiDAR's crown tops, so trees under a taller canopy are missed and a big spreading crown can count as two.</p>
+    <p>Where an area is covered by more than one survey, the newest is used, and the gaps it leaves are filled from older ones; the line under the result names each survey used.</p>
+    <h3>Aerial, Ground and Topo</h3>
+    <p><strong>Aerial</strong> shows the photo with tree heights coloured over it. <strong>Ground</strong> takes away the photo and the trees: inside the circle it shows the bare earth from the LiDAR's ground model at 1 m, shaded as if lit from the north-west, so tracks, streams, slips and old earthworks under the canopy show up. Outside the circle is Esri's much coarser world hillshade, for context. <strong>Topo</strong> is LINZ's NZ Topo50 map (contours, tracks, huts) with the tree heights coloured over it; zoomed well out it's OpenTopoMap.</p>
+    <h3>How heights are worked out</h3>
+    <p>Height is the surface model (the top of everything) minus the ground model (the bare earth under it), both from the same flight, on a 1 m grid. Things that are clearly power lines or pylons are left out: a cell far above everything round it and too narrow to be a crown. Buildings are not left out, so a tap on a roof gives the roof.</p>
+    <p>The 1 m grid can clip the very tip of a narrow, pointed crown (a young conifer, a cabbage tree), so the true top may be a metre or two higher. Heights are for the date the survey was flown; a tree may have grown since. When more than one survey covers the spot, the newest is used; the line under the result says when it was flown and whose it is.</p>
+    <h3>Data used</h3>
+    <p>Nothing is downloaded until you click or finish an area. Then HowTall? reads the 1 m cells under it from LINZ's Cloud-Optimised GeoTIFFs, in blocks of 512 × 512 m: about 2.5 MB for a 200 m circle, roughly 5 to 15 MB for 100 ha, more where it straddles block edges or needs an older survey to fill gaps. Blocks are kept while the page is open, so reading again nearby downloads nothing.</p>
+    <h3>Sources</h3>
+    <p>LiDAR: <a href="https://registry.opendata.aws/nz-elevation/" target="_blank" rel="noopener">nz-elevation</a>, published by Toitū Te Whenua Land Information New Zealand, CC BY 4.0. Each survey has its own licensor, often a regional council, named under the result and on the map. Maps: Esri World Imagery and World Hillshade; NZ Topo50 from Toitū Te Whenua LINZ (CC BY 4.0); <a href="https://opentopomap.org/about" target="_blank" rel="noopener">OpenTopoMap</a> (CC-BY-SA). The code of HowTall? is PolyForm Strict 1.0.0, and its own words and images CC BY-NC-ND 4.0 (<a href="https://github.com/rutherfordecology/howtall/blob/main/LICENSE" target="_blank" rel="noopener">licence</a>). Built by <a href="https://www.rutherfordecology.co.nz/" target="_blank" rel="noopener">Rutherford Ecology</a> from the LiDAR tab of inferrd.</p>
+    <p>Useful? <a href="https://buymeacoffee.com/rutherfordecology" target="_blank" rel="noopener">Buy me a coffee</a>.</p>
+    <p id="aboutVer" style="color:var(--grey);font-size:12px;"></p>
+  </div>
+  <div class="about-foot"><button class="btn" type="button" id="aboutClose">Close</button></div>
+</dialog>
+
+<script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+<script src="../icons.js"></script>
+<script>
+const VERSION = '0.15.0';
+document.getElementById('ver').textContent = 'v' + VERSION;
+document.getElementById('aboutVer').textContent = 'Version ' + VERSION;
+
+/* ---------------------------------------------------------------------
+   LINZ 1 m DEM (bare ground) and DSM (top of everything), straight from
+   the open nz-elevation bucket. Every survey is cut into the same
+   1:10k sheet tiles in NZTM, so the tile under a point is worked out
+   from its coordinates, and a HEAD request per survey says which
+   surveys have it: no survey tile lists to download.
+   --------------------------------------------------------------------- */
+const BUCKET = 'https://nz-elevation.s3.ap-southeast-2.amazonaws.com/';
+const NZTM_DEF = '+proj=tmerc +lat_0=0 +lon_0=173 +k=0.9996 +x_0=1600000 +y_0=10000000 +ellps=GRS80 +towgs84=0,0,0,0,0,0,0 +units=m +no_defs';
+// Lon/lat extent of each region folder's surveys (October 2026), so only
+// nearby surveys are asked. A folder missing from here is always asked.
+const REGION_BBOX = {
+  'auckland': [174.10, -37.38, 175.64, -35.97], 'bay-of-plenty': [175.74, -38.96, 178.19, -37.18],
+  'canterbury': [169.43, -45.48, 174.35, -41.44], 'gisborne': [177.05, -39.05, 178.69, -37.44],
+  'hawkes-bay': [175.98, -40.52, 178.41, -38.02], 'manawatu-whanganui': [174.66, -40.88, 176.71, -38.37],
+  'marlborough': [172.63, -42.59, 174.51, -40.60], 'nelson': [172.69, -41.61, 173.77, -40.73],
+  'northland': [171.93, -36.48, 174.89, -34.05], 'otago': [168.53, -46.74, 171.26, -44.50],
+  'southland': [167.13, -47.02, 169.39, -44.57], 'taranaki': [173.65, -39.98, 175.13, -38.64],
+  'tasman': [171.99, -42.39, 173.65, -40.41], 'waikato': [174.52, -39.38, 176.79, -36.35],
+  'wellington': [174.52, -41.72, 176.43, -40.56], 'west-coast': [167.99, -44.57, 172.79, -40.67]
+};
+const NZ_BBOX = [165.8, -47.4, 179.0, -34.0];
+const SPIKE_M = 100;       // taller than any NZ tree: birds, wires, return errors
+const WIRE_CLOSE_M = 5;    // see wireCells()
+const WIRE_ABOVE_M = 10;
+const RING_IN = 8, RING_OUT = 20;          // the canopy a tree is compared with, m out from its top
+const STANDOUT_M = 3, STANDOUT_FRAC = 0.1;  // how far above that canopy a tree must rise to get a dot
+const DIP_M = 2, DIP_FRAC = 0.25; // how far the canopy must dip between two separate trees
+const TREE_REACH_M = 3;    // a tree's top is the highest cell this close to the tap
+const PAD_M = 6;           // extra read round the circle, for the wire test
+const CATALOG_KEY = 'howtall.catalog.v1', CATALOG_DAYS = 7;
+const AREA_MAX_HA = 100;   // a drawn area
+const BOX_MAX_M = 2500;    // and the box round it, either way
+const MAX_SURVEYS = 3;     // the newest, and up to two older ones to fill its gaps
+const TREES_MAX = 60000;
+
+const toNztm = (lon, lat) => proj4('EPSG:4326', 'EPSG:2193', [lon, lat]);
+const toLonLat = (x, y) => proj4('EPSG:2193', 'EPSG:4326', [x, y]);
+const fmtM = (v, d = 1) => v === v && v != null ? v.toFixed(d) : '–';
+const esc = (s) => String(s).replace(/&/g, '&amp;').replace(/</g, '&lt;');
+
+/* ---------- libraries, loaded straight away: they're the whole app ---------- */
+const libs = Promise.all([
+  'https://cdn.jsdelivr.net/npm/geotiff@3.0.5/dist-browser/geotiff.js', // 3.x: 2.x fails on COGs with empty tiles
+  'https://cdnjs.cloudflare.com/ajax/libs/proj4js/2.11.0/proj4.js'
+].map(src => new Promise((res, rej) => {
+  const s = document.createElement('script');
+  s.src = src; s.onload = res; s.onerror = () => rej(new Error('could not load ' + src.split('/').pop()));
+  document.head.appendChild(s);
+}))).then(() => proj4.defs('EPSG:2193', NZTM_DEF));
+
+/* ---------- the survey list (LINZ's catalog, cached for a week) ---------- */
+let catalogPromise = null;
+function catalog() {
+  if (catalogPromise) return catalogPromise;
+  try {
+    const c = JSON.parse(localStorage.getItem(CATALOG_KEY) || 'null');
+    if (c && Date.now() - c.at < CATALOG_DAYS * 864e5) return (catalogPromise = Promise.resolve(c.list));
+  } catch (e) {}
+  catalogPromise = fetch(BUCKET + 'catalog.json').then(r => { if (!r.ok) throw new Error('LINZ catalogue returned ' + r.status); return r.json(); }).then(c => {
+    const hrefs = new Set(c.links.map(l => l.href));
+    const list = c.links
+      .filter(l => l.rel === 'child' && /\/dsm_1m\/2193\/collection\.json$/.test(l.href) && !l.href.startsWith('./new-zealand/'))
+      .filter(l => hrefs.has(l.href.replace('/dsm_1m/', '/dem_1m/')))
+      .map(l => {
+        const href = l.href.replace(/^\.\//, ''), parts = href.split('/');
+        const ym = /\((\d{4})(?:-(\d{4}))?\)/.exec(l.title || '') || /_(\d{4})(?:-(\d{4}))?$/.exec(parts[1]) || [];
+        return {
+          id: parts[0] + '/' + parts[1], region: parts[0],
+          name: (l.title || parts[1]).replace(/\s*LiDAR 1m DSM\s*/i, ' ').replace(/\s+/g, ' ').trim(),
+          from: Number(ym[1]) || 0, to: Number(ym[2] || ym[1]) || 0,
+          dsm: href.replace(/collection\.json$/, ''), dem: href.replace('/dsm_1m/', '/dem_1m/').replace(/collection\.json$/, '')
+        };
+      })
+      .sort((a, b) => (b.to - a.to) || (b.from - a.from));
+    try { localStorage.setItem(CATALOG_KEY, JSON.stringify({ at: Date.now(), list })); } catch (e) {}
+    return list;
+  }).catch(err => { catalogPromise = null; throw err; });
+  return catalogPromise;
+}
+
+/* ---------- LINZ's sheet grid ----------
+   24 × 36 km 1:50k sheets counted from x 988000, y 6234000 (sheet AS00),
+   each cut into 5 × 5 tiles of 4.8 × 7.2 km at 1:10k. */
+const SHEET_LETTERS = 'ABCDEFGHJKLMNPQRSTUVWXYZ';
+const pad2 = (v) => String(v).padStart(2, '0');
+function tileName(x, y) {
+  const sc = Math.floor((x - 988000) / 24000), sr = Math.floor((6234000 - y) / 36000), t = sr + 16;
+  if (sc < 0 || sc > 99 || t < 0 || t >= 24 * 24) return null;
+  const c = Math.floor((x - 988000 - sc * 24000) / 4800) + 1, r = Math.floor((6234000 - sr * 36000 - y) / 7200) + 1;
+  return SHEET_LETTERS[Math.floor(t / 24)] + SHEET_LETTERS[t % 24] + pad2(sc) + '_10000_' + pad2(r) + pad2(c);
+}
+function tileBounds(name) {
+  const m = /^([A-Z]{2})(\d{2})_10000_(\d{2})(\d{2})$/.exec(name);
+  const r = Number(m[3]), c = Number(m[4]);
+  const row = SHEET_LETTERS.indexOf(m[1][0]) * 24 + SHEET_LETTERS.indexOf(m[1][1]) - 16;
+  const x0 = 988000 + Number(m[2]) * 24000 + (c - 1) * 4800, y1 = 6234000 - row * 36000 - (r - 1) * 7200;
+  return [x0, y1 - 7200, x0 + 4800, y1];
+}
+// The tiles a box [x0, y0, x1, y1] touches (tiles are 4.8 × 7.2 km, so
+// stepping a little under that never skips one).
+function tilesFor(b) {
+  const s = new Set();
+  const xs = [], ys = [];
+  for (let x = b[0]; x < b[2]; x += 4000) xs.push(x); xs.push(b[2] - 0.01);
+  for (let y = b[1]; y < b[3]; y += 6000) ys.push(y); ys.push(b[3] - 0.01);
+  xs.forEach(x => ys.forEach(y => { const n = tileName(x, y); if (n) s.add(n); }));
+  return [...s];
+}
+
+/* ---------- who licenses each survey ----------
+   Each survey's licensor (often a council or a councils' group, not LINZ)
+   is in the "providers" list at the end of its collection.json. Only the
+   last 8 KB is read, once per survey, and remembered. */
+const LIC_KEY = 'howtall.licensors.v1';
+let licCache = {};
+try { licCache = JSON.parse(localStorage.getItem(LIC_KEY) || '{}') || {}; } catch (e) {}
+const licPending = new Map();
+function licensors(s) {
+  if (licCache[s.id]) return Promise.resolve(licCache[s.id]);
+  if (!licPending.has(s.id)) licPending.set(s.id, fetch(BUCKET + s.dsm + 'collection.json', { headers: { Range: 'bytes=-8000' } })
+    .then(r => r.text()).then(t => {
+      const i = t.lastIndexOf('"providers"');
+      if (i < 0) return null;
+      const names = [];
+      for (const m of t.slice(i).matchAll(/\{[^{}]*\}/g)) {
+        try { const o = JSON.parse(m[0]); if (o.name && (o.roles || []).includes('licensor')) names.push(o.name); } catch (e) {}
+      }
+      if (!names.length) return null;
+      licCache[s.id] = names;
+      try { localStorage.setItem(LIC_KEY, JSON.stringify(licCache)); } catch (e) {}
+      return names;
+    }).catch(() => null).finally(() => licPending.delete(s.id)));
+  return licPending.get(s.id);
+}
+const LIDAR_CREDIT = 'LiDAR from Toitū Te Whenua LINZ, CC BY 4.0';
+let lidarCredit = LIDAR_CREDIT;
+function setLidarCredit(text) {
+  map.attributionControl.removeAttribution(lidarCredit);
+  lidarCredit = text;
+  map.attributionControl.addAttribution(lidarCredit);
+}
+
+const headCache = new Map();
+function exists(url) {
+  if (!headCache.has(url)) headCache.set(url, fetch(url, { method: 'HEAD' }).then(r => r.ok).catch(() => { headCache.delete(url); return false; }));
+  return headCache.get(url);
+}
+// Surveys with both a DSM and a DEM tile somewhere under the box, newest first.
+async function surveysFor(box) {
+  const list = await catalog();
+  const ll4 = [[box[0], box[1]], [box[2], box[1]], [box[0], box[3]], [box[2], box[3]]].map(([x, y]) => toLonLat(x, y));
+  const w = Math.min(...ll4.map(c => c[0])), e = Math.max(...ll4.map(c => c[0])), s = Math.min(...ll4.map(c => c[1])), n = Math.max(...ll4.map(c => c[1]));
+  const near = (r) => { const b = REGION_BBOX[r]; return !b || (e > b[0] - 0.05 && w < b[2] + 0.05 && n > b[1] - 0.05 && s < b[3] + 0.05); };
+  const tiles = tilesFor(box);
+  if (!tiles.length) return [];
+  const cand = list.filter(sv => near(sv.region));
+  const ok = await Promise.all(cand.map(async sv => {
+    for (const t of tiles) if ((await exists(BUCKET + sv.dsm + t + '.tiff')) && (await exists(BUCKET + sv.dem + t + '.tiff'))) return true;
+    return false;
+  }));
+  return cand.filter((sv, i) => ok[i]);
+}
+
+/* ---------- reading cells ---------- */
+const imageCache = new Map();
+function tiffImage(url) {
+  if (!imageCache.has(url)) imageCache.set(url, GeoTIFF.fromUrl(url).then(t => t.getImage(0)).catch(err => { imageCache.delete(url); throw err; }));
+  return imageCache.get(url);
+}
+// One surface over the box, from every tile under it. Cells with no data stay NaN.
+async function readSurface(dir, g) {
+  const out = new Float32Array(g.W * g.H).fill(NaN);
+  await Promise.all(tilesFor([g.x0, g.y0, g.x1, g.y1]).map(async name => {
+    const url = BUCKET + dir + name + '.tiff';
+    if (!(await exists(url))) return;
+    const tb = tileBounds(name);
+    const ox0 = Math.max(tb[0], g.x0), ox1 = Math.min(tb[2], g.x1), oy0 = Math.max(tb[1], g.y0), oy1 = Math.min(tb[3], g.y1);
+    if (!(ox1 > ox0 && oy1 > oy0)) return;
+    const img = await tiffImage(url);
+    const px = (tb[2] - tb[0]) / img.getWidth(); // 1 m
+    const bw = img.getTileWidth(), bh = img.getTileHeight(), nodata = img.getGDALNoData();
+    const c0 = Math.floor((ox0 - tb[0]) / px), c1 = Math.ceil((ox1 - tb[0]) / px), r0 = Math.floor((tb[3] - oy1) / px), r1 = Math.ceil((tb[3] - oy0) / px);
+    const jobs = [];
+    for (let by = Math.floor(r0 / bh); by * bh < r1; by++) for (let bx = Math.floor(c0 / bw); bx * bw < c1; bx++) jobs.push(block(url, bx, by).then(bl => {
+      // Copy the block's cells that fall in the grid.
+      for (let r = Math.max(r0, bl.r0); r < Math.min(r1, bl.r0 + bl.h); r++) {
+        const gr = Math.round((g.y1 - (tb[3] - (r + 0.5) * px)) / g.res - 0.5);
+        if (gr < 0 || gr >= g.H) continue;
+        for (let c = Math.max(c0, bl.c0); c < Math.min(c1, bl.c0 + bl.w); c++) {
+          const gc = Math.round((tb[0] + (c + 0.5) * px - g.x0) / g.res - 0.5);
+          if (gc < 0 || gc >= g.W) continue;
+          const v = bl.ras[(r - bl.r0) * bl.w + (c - bl.c0)];
+          if (v !== nodata && v > -1000) out[gr * g.W + gc] = v;
+        }
+      }
+    }));
+    await Promise.all(jobs);
+  }));
+  return out;
+}
+// One of the COG's own blocks (512 × 512 m), kept once read, so taps
+// anywhere else in it download nothing more. Kept to the last 80
+// (about 80 MB of memory; a 100 ha area can need 20 to 40).
+const blockCache = new Map();
+function block(url, bx, by) {
+  const key = url + '|' + bx + '|' + by;
+  if (blockCache.has(key)) { const v = blockCache.get(key); blockCache.delete(key); blockCache.set(key, v); return v; }
+  const p = (async () => {
+    const read = async () => {
+      const img = await tiffImage(url);
+      const bw = img.getTileWidth(), bh = img.getTileHeight();
+      const c0 = bx * bw, r0 = by * bh, w = Math.min(bw, img.getWidth() - c0), h = Math.min(bh, img.getHeight() - r0);
+      const ras = (await img.readRasters({ window: [c0, r0, c0 + w, r0 + h], samples: [0] }))[0];
+      return { c0, r0, w, h, ras };
+    };
+    // A read now and then comes back short ("Invalid typed array length");
+    // a fresh second go has always worked (inferrd's experience).
+    try { return await read(); } catch (err) { imageCache.delete(url); return await read(); }
+  })().catch(err => { blockCache.delete(key); throw err; });
+  blockCache.set(key, p);
+  while (blockCache.size > 80) blockCache.delete(blockCache.keys().next().value);
+  return p;
+}
+
+// Power lines and pylons: a cell over WIRE_ABOVE_M that fewer than a
+// quarter of the cells within ~3 m come within WIRE_CLOSE_M of, and that
+// stands over WIRE_ABOVE_M above their middle. A crown is several metres
+// across, so its top has plenty of close neighbours and stays in.
+// (Same test as inferrd's LiDAR tab.)
+function wireCells(h, g) {
+  const W = g.W, H = g.H, r = 3, out = new Uint8Array(h.length), win = [];
+  for (let y = 0; y < H; y++) for (let x = 0; x < W; x++) {
+    const i = y * W + x, v = h[i];
+    if (!(v > WIRE_ABOVE_M)) continue;
+    let n = 0, close = 0;
+    for (let yy = Math.max(0, y - r); yy <= Math.min(H - 1, y + r); yy++) for (let xx = Math.max(0, x - r); xx <= Math.min(W - 1, x + r); xx++) {
+      const u = h[yy * W + xx];
+      if (u !== u || (yy === y && xx === x)) continue;
+      n++; if (u >= v - WIRE_CLOSE_M) close++;
+    }
+    if (!n || close >= n / 4) continue;
+    win.length = 0;
+    for (let yy = Math.max(0, y - r); yy <= Math.min(H - 1, y + r); yy++) for (let xx = Math.max(0, x - r); xx <= Math.min(W - 1, x + r); xx++) {
+      const u = h[yy * W + xx]; if (u === u) win.push(u);
+    }
+    win.sort((p, q) => p - q);
+    if (v - win[win.length >> 1] > WIRE_ABOVE_M) out[i] = 1;
+  }
+  // The top of a spiky crown can fail that, but sits just above a crown
+  // cell that passed; a wire is far above everything beside it.
+  for (let pass = 0; pass < 2; pass++) {
+    const back = [];
+    for (let y = 0; y < H; y++) for (let x = 0; x < W; x++) {
+      const i = y * W + x;
+      if (!out[i]) continue;
+      let kept = false;
+      for (let yy = Math.max(0, y - 1); yy <= Math.min(H - 1, y + 1) && !kept; yy++) for (let xx = Math.max(0, x - 1); xx <= Math.min(W - 1, x + 1); xx++) {
+        const j = yy * W + xx;
+        if (!out[j] && h[j] === h[j] && h[i] - h[j] <= WIRE_CLOSE_M && h[j] > WIRE_ABOVE_M) { kept = true; break; }
+      }
+      if (kept) back.push(i);
+    }
+    back.forEach(i => { out[i] = 0; });
+  }
+  return out;
+}
+
+// A patch: heights over a box of whole metres, from the newest survey,
+// with any cells it has no data for filled from older surveys (up to
+// MAX_SURVEYS in all). Surface and ground for a cell always come from the
+// same survey. `src` says which survey each cell came from.
+let patches = []; // the last few, to reuse on clicks nearby
+async function getPatch(surveys, box, region, onStatus, isStale) {
+  const need = [box[0] - PAD_M, box[1] - PAD_M, box[2] + PAD_M, box[3] + PAD_M];
+  const key = surveys.map(s => s.id).join('|');
+  const have = patches.find(p => p.key === key && p.g.x0 <= need[0] && p.g.y0 <= need[1] && p.g.x1 >= need[2] && p.g.y1 >= need[3]);
+  if (have) return have;
+  const g = { res: 1, x0: Math.floor(need[0]), y0: Math.floor(need[1]), x1: Math.ceil(need[2]), y1: Math.ceil(need[3]) };
+  g.W = g.x1 - g.x0; g.H = g.y1 - g.y0;
+  const N = g.W * g.H;
+  const dem = new Float32Array(N).fill(NaN), dsm = new Float32Array(N).fill(NaN), src = new Int8Array(N).fill(-1);
+  const mask = regionMask(region, g);
+  let nIn = 0; for (let i = 0; i < N; i++) nIn += mask[i];
+  const used = [];
+  for (const s of surveys) {
+    if (used.length >= MAX_SURVEYS) break;
+    onStatus('Reading heights from ' + s.name + '…');
+    const [a, b] = await Promise.all([readSurface(s.dem, g), readSurface(s.dsm, g)]);
+    if (isStale()) return null;
+    let added = 0, missing = 0;
+    for (let i = 0; i < N; i++) {
+      if (src[i] < 0 && a[i] === a[i] && b[i] === b[i]) { dem[i] = a[i]; dsm[i] = b[i]; src[i] = used.length; if (mask[i]) added++; }
+      if (mask[i] && src[i] < 0) missing++;
+    }
+    if (added) used.push({ survey: s, cells: added });
+    // Stop once the area is near enough covered. What's left is usually
+    // water or the survey's edge, which older surveys won't help with.
+    if (missing <= nIn * 0.01) break;
+  }
+  const h = new Float32Array(N);
+  for (let i = 0; i < N; i++) { const v = dsm[i] - dem[i]; h[i] = v !== v || v > SPIKE_M ? NaN : Math.max(0, v); }
+  onStatus('Finding trees…');
+  await new Promise(r => setTimeout(r, 0)); // let the status show
+  const wires = wireCells(h, g);
+  let nWires = 0;
+  wires.forEach((w, i) => { if (w) { h[i] = NaN; nWires++; } });
+  const p = { key, survey: used.length ? used[0].survey : surveys[0], used, g, dem, h, src, nWires };
+  patches = [p, ...patches].slice(0, 3);
+  return p;
+}
+
+// The area being read: a circle { kind: 'circle', cx, cy, r } or a drawn
+// polygon { kind: 'poly', pts: [[x, y], …] }, both in NZTM metres.
+function regionBox(rg) {
+  if (rg.kind === 'circle') return [rg.cx - rg.r, rg.cy - rg.r, rg.cx + rg.r, rg.cy + rg.r];
+  const xs = rg.pts.map(q => q[0]), ys = rg.pts.map(q => q[1]);
+  return [Math.min(...xs), Math.min(...ys), Math.max(...xs), Math.max(...ys)];
+}
+function inPoly(pts, x, y) {
+  let inside = false;
+  for (let i = 0, j = pts.length - 1; i < pts.length; j = i++) {
+    const [xi, yi] = pts[i], [xj, yj] = pts[j];
+    if ((yi > y) !== (yj > y) && x < (xj - xi) * (y - yi) / (yj - yi) + xi) inside = !inside;
+  }
+  return inside;
+}
+const polyArea = (pts) => { let a = 0; for (let i = 0, j = pts.length - 1; i < pts.length; j = i++) a += (pts[j][0] + pts[i][0]) * (pts[j][1] - pts[i][1]); return Math.abs(a / 2); };
+// 1 for each cell of grid g whose middle is inside the region. A polygon
+// is filled row by row (crossings sorted), not cell by cell.
+function regionMask(rg, g) {
+  const m = new Uint8Array(g.W * g.H);
+  for (let r = 0; r < g.H; r++) {
+    const y = g.y1 - r - 0.5;
+    if (rg.kind === 'circle') {
+      const dy = y - rg.cy; if (Math.abs(dy) > rg.r) continue;
+      const half = Math.sqrt(rg.r * rg.r - dy * dy);
+      const c0 = Math.max(0, Math.ceil(rg.cx - half - g.x0 - 0.5)), c1 = Math.min(g.W - 1, Math.floor(rg.cx + half - g.x0 - 0.5));
+      for (let c = c0; c <= c1; c++) m[r * g.W + c] = 1;
+      continue;
+    }
+    const xs = [], pts = rg.pts;
+    for (let i = 0, j = pts.length - 1; i < pts.length; j = i++) {
+      const [xi, yi] = pts[i], [xj, yj] = pts[j];
+      if ((yi > y) !== (yj > y)) xs.push(xi + (y - yi) * (xj - xi) / (yj - yi));
+    }
+    xs.sort((a, b) => a - b);
+    for (let k = 0; k + 1 < xs.length; k += 2) {
+      const c0 = Math.max(0, Math.ceil(xs[k] - g.x0 - 0.5)), c1 = Math.min(g.W - 1, Math.floor(xs[k + 1] - g.x0 - 0.5));
+      for (let c = c0; c <= c1; c++) m[r * g.W + c] = 1;
+    }
+  }
+  return m;
+}
+const cellAt = (p, x, y) => { const c = Math.floor(x - p.g.x0), r = Math.floor(p.g.y1 - y); return c >= 0 && r >= 0 && c < p.g.W && r < p.g.H ? r * p.g.W + c : -1; };
+const cellXY = (p, i) => [p.g.x0 + (i % p.g.W) + 0.5, p.g.y1 - Math.floor(i / p.g.W) - 0.5];
+
+// The highest cell within r m of a point: the top of the tree clicked.
+function topNear(p, x, y, r) {
+  let best = -1;
+  for (let dy = -r; dy <= r; dy++) for (let dx = -r; dx <= r; dx++) {
+    if (dx * dx + dy * dy > r * r) continue;
+    const i = cellAt(p, x + dx, y + dy);
+    if (i >= 0 && p.h[i] === p.h[i] && (best < 0 || p.h[i] > p.h[best])) best = i;
+  }
+  return best;
+}
+// Share of the area in each height class.
+const CLASSES = [[0, 2, 'Under 2 m'], [2, 5, '2–5 m'], [5, 10, '5–10 m'], [10, 20, '10–20 m'], [20, 30, '20–30 m'], [30, Infinity, '30 m +']];
+// Heights within an area (inC: 1 per cell inside): the highest cell, the
+// trees (one top per crown, over 5 m), the ten tallest for labels, cover
+// over 2 m, its mean height, and the height classes.
+function regionStats(p, inC) {
+  const { W, H } = p.g, h = p.h;
+  let n = 0, nData = 0, over2 = 0, sum2 = 0, top = -1;
+  const cls = CLASSES.map(() => 0);
+  for (let i = 0; i < W * H; i++) {
+    if (!inC[i]) continue;
+    n++;
+    const v = h[i];
+    if (v !== v) continue;
+    nData++;
+    if (v >= 2) { over2++; sum2 += v; }
+    let k = 0; while (v >= CLASSES[k][1]) k++; cls[k]++;
+    if (top < 0 || v > h[top]) top = i;
+  }
+  const peaks = [];
+  for (let r = 0; r < H; r++) for (let c = 0; c < W; c++) {
+    const i = r * W + c, v = h[i];
+    if (!inC[i] || !(v >= 3)) continue;
+    let isTop = true;
+    for (let dy = -2; dy <= 2 && isTop; dy++) for (let dx = -2; dx <= 2; dx++) {
+      const rr = r + dy, cc = c + dx;
+      if ((dx || dy) && rr >= 0 && cc >= 0 && rr < H && cc < W && h[rr * W + cc] > v) { isTop = false; break; }
+    }
+    if (isTop) peaks.push(i);
+  }
+  peaks.sort((a, b) => h[b] - h[a]);
+  // One tree per crown. Taking tops tallest first, a top is a new tree only
+  // if, on the straight line to every tree already found within 20 m, the
+  // canopy dips by at least DIP_M or DIP_FRAC of the lower top before rising
+  // again. Bumps on one broad crown don't dip that far, so they join the
+  // taller top. The line is read every 0.5 m and smoothed over three
+  // readings so a single gap between leaves doesn't count as a dip; no data
+  // on the line (a gap, water, a power line left out) counts as a dip.
+  const sepBy = (i, j) => {
+    const [x0, y0] = cellXY(p, i), [x1, y1] = cellXY(p, j);
+    const d = Math.hypot(x1 - x0, y1 - y0);
+    if (d < 2) return false;                 // closer than 2 m: same crown
+    if (d > 20) return true;                 // too far apart to be one crown
+    const need = Math.min(h[i], h[j]) - Math.max(DIP_M, DIP_FRAC * Math.min(h[i], h[j]));
+    const steps = Math.ceil(d / 0.5), vals = [];
+    for (let k = 0; k <= steps; k++) {
+      const c = cellAt(p, x0 + (x1 - x0) * k / steps, y0 + (y1 - y0) * k / steps);
+      vals.push(c >= 0 ? h[c] : NaN);
+    }
+    for (let k = 1; k < vals.length - 1; k++) {
+      const m = (vals[k - 1] + vals[k] + vals[k + 1]) / 3;
+      if (!(m === m) || m <= need) return true;
+    }
+    return false;
+  };
+  // Trees found so far are kept in 20 m buckets, so each new top is only
+  // checked against the trees near it.
+  const trees = [], buckets = new Map(), bk = (a, b) => a * 100003 + b;
+  for (const i of peaks) {
+    if (h[i] < 5) break;
+    const bc = Math.floor((i % W) / 20), br = Math.floor(i / W / 20);
+    let ok = true;
+    for (let a = bc - 1; a <= bc + 1 && ok; a++) for (let b = br - 1; b <= br + 1 && ok; b++)
+      for (const j of buckets.get(bk(a, b)) || []) if (!sepBy(i, j)) { ok = false; break; }
+    if (!ok) continue;
+    trees.push(i);
+    const k = bk(bc, br); if (!buckets.has(k)) buckets.set(k, []); buckets.get(k).push(i);
+    if (trees.length >= TREES_MAX) break;
+  }
+  // Trees worth a dot: ones that stand out. Each tree is compared with the
+  // canopy round it, a ring RING_IN to RING_OUT m out, taking the ring's
+  // 95th-percentile height as "the canopy level" (so a hedge or shelterbelt crossing the ring still counts as canopy). A tree stands out if it
+  // rises above that by STANDOUT_M or STANDOUT_FRAC of its height
+  // (whichever is more): an emergent over the canopy, or a lone tree in
+  // open ground, where the ring is low. Trees in an even canopy don't.
+  const rIn = RING_IN, rOut = RING_OUT; // the grid is 1 m
+  const ringOff = [];
+  for (let dy = -rOut; dy <= rOut; dy++) for (let dx = -rOut; dx <= rOut; dx++) {
+    const d2 = dx * dx + dy * dy;
+    if (d2 >= rIn * rIn && d2 <= rOut * rOut) ringOff.push([dx, dy]);
+  }
+  const buf = new Float32Array(ringOff.length);
+  const standouts = trees.filter(i => {
+    const r0 = Math.floor(i / W), c0 = i % W;
+    let n = 0;
+    for (const [dx, dy] of ringOff) {
+      const r = r0 + dy, c = c0 + dx;
+      if (r < 0 || c < 0 || r >= H || c >= W) continue;
+      const v = h[r * W + c];
+      buf[n++] = v === v ? Math.max(0, v) : 0;   // no data (water, a gap) counts as open
+    }
+    if (!n) return true;
+    const ring = buf.subarray(0, n).sort();
+    const level = ring[Math.floor(n * 0.95)];
+    return h[i] - level >= Math.max(STANDOUT_M, STANDOUT_FRAC * h[i]);
+  });
+  // The ten labelled tops: the tallest trees, at least 6 m apart so the
+  // labels have room.
+  const tops = [];
+  for (const i of trees) {
+    const [x, y] = cellXY(p, i);
+    if (tops.every(j => { const [u, w] = cellXY(p, j); return (u - x) ** 2 + (w - y) ** 2 >= 36; })) tops.push(i);
+    if (tops.length >= 10) break;
+  }
+  return { n, nData, over2, mean2: over2 ? sum2 / over2 : NaN, top, tops, trees, standouts, cls, capped: trees.length >= TREES_MAX };
+}
+
+/* ---------- map ---------- */
+const map = L.map('map', { zoomControl: false, maxZoom: 21, tap: true }).setView([-41.2, 173.5], 5);
+map.attributionControl.addAttribution(lidarCredit);
+L.control.zoom({ position: 'bottomright' }).addTo(map);
+// Three looks: Aerial (photo, heights coloured on top), Ground (no photo,
+// no trees: the bare earth from the LiDAR's ground model, shaded grey,
+// over Esri's coarse world hillshade for the land round it) and Topo
+// (LINZ Topo50, heights coloured on top).
+const baseAerial = L.tileLayer('https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}', {
+  maxZoom: 21, maxNativeZoom: 19, attribution: 'Imagery © Esri'
+});
+const baseGround = L.tileLayer('https://server.arcgisonline.com/ArcGIS/rest/services/Elevation/World_Hillshade/MapServer/tile/{z}/{y}/{x}', {
+  maxZoom: 21, maxNativeZoom: 16, attribution: 'Hillshade © Esri'
+});
+// Topo: LINZ's NZ Topo50 from zoom 12 in (from the LINZ Data Service,
+// with Rutherford Ecology's key), OpenTopoMap further out, where a
+// 1:50k map shrunk down can't be read.
+const LDS_KEY = '4eef1103ab9041ea849b1a3faf7c8106';
+const baseTopo = L.layerGroup([
+  L.tileLayer('https://{s}.tile.opentopomap.org/{z}/{x}/{y}.png', {
+    maxZoom: 11, attribution: 'Map © <a href="https://opentopomap.org/about">OpenTopoMap</a> (CC-BY-SA), © OpenStreetMap contributors'
+  }),
+  L.tileLayer('https://tiles-{s}.data-cdn.linz.govt.nz/services;key=' + LDS_KEY + '/tiles/v4/layer=50767/EPSG:3857/{z}/{x}/{y}.png', {
+    subdomains: 'abcd', minZoom: 12, maxZoom: 21, maxNativeZoom: 17, attribution: 'NZ Topo50 © Toitū Te Whenua LINZ, CC BY 4.0'
+  })
+]);
+const BASES = { aerial: baseAerial, ground: baseGround, topo: baseTopo };
+let look = 'aerial';
+try { const v = localStorage.getItem('howtall.web.look'); if (BASES[v]) look = v; } catch (e) {}
+function setLook(v) {
+  look = v;
+  try { localStorage.setItem('howtall.web.look', v); } catch (e) {}
+  Object.entries(BASES).forEach(([k, l]) => { if (k !== look) map.removeLayer(l); });
+  BASES[look].addTo(map);
+  document.getElementById('map').classList.toggle('ground', look === 'ground');
+  document.querySelectorAll('.look button').forEach(b => { const on = b.dataset.look === look; b.classList.toggle('on', on); b.setAttribute('aria-checked', String(on)); });
+  if (lastDraw) drawPatch(...lastDraw);
+  syncLegend();
+}
+try {
+  const v = JSON.parse(localStorage.getItem('howtall.web.view') || 'null');
+  if (v) map.setView([v[0], v[1]], v[2]);
+} catch (e) {}
+map.on('moveend', () => { try { const c = map.getCenter(); localStorage.setItem('howtall.web.view', JSON.stringify([+c.lat.toFixed(6), +c.lng.toFixed(6), map.getZoom()])); } catch (e) {} });
+map.createPane('heights'); map.getPane('heights').style.zIndex = 350;
+const marks = L.layerGroup().addTo(map);
+let overlay = null, overlayUrl = null, youMark = null;
+
+// The patch's heights as an image in lon/lat, resampled cell by cell so
+// the 1 m grid lines up with the imagery (NZTM is turned a little from
+// north away from 173°E).
+// Viridis, purple (low) to yellow (tall): stands out on green canopy.
+const RAMP = [[0, '#440154'], [10, '#3b528b'], [20, '#21918c'], [30, '#5ec962'], [40, '#fde725']].map(([v, c]) => [v, [1, 3, 5].map(k => parseInt(c.slice(k, k + 2), 16))]);
+function rampRgb(v) {
+  let j = 0;
+  while (j < RAMP.length - 2 && v > RAMP[j + 1][0]) j++;
+  const t = Math.min(1, Math.max(0, (v - RAMP[j][0]) / (RAMP[j + 1][0] - RAMP[j][0])));
+  return RAMP[j][1].map((a, q) => Math.round(a + (RAMP[j + 1][1][q] - a) * t));
+}
+// Bare-ground hillshade (Horn's method), light from the north-west at
+// 45°, 0–1, worked out once per patch.
+function hillshade(p) {
+  if (p.shade) return p.shade;
+  const { W, H } = p.g, z = p.dem, out = new Float32Array(W * H).fill(NaN);
+  const zen = Math.PI / 4, az = (360 - 315 + 90) * Math.PI / 180, cz = Math.cos(zen), sz = Math.sin(zen);
+  const at = (x, y, c) => { const v = z[Math.min(H - 1, Math.max(0, y)) * W + Math.min(W - 1, Math.max(0, x))]; return v === v ? v : c; };
+  for (let y = 0; y < H; y++) for (let x = 0; x < W; x++) {
+    const c = z[y * W + x];
+    if (c !== c) continue;
+    const a = at(x - 1, y - 1, c), b = at(x, y - 1, c), cc = at(x + 1, y - 1, c), d = at(x - 1, y, c), f = at(x + 1, y, c);
+    const gg = at(x - 1, y + 1, c), h = at(x, y + 1, c), i = at(x + 1, y + 1, c);
+    // ×2 vertical exaggeration, so tracks and small gullies on gentle ground show.
+    const dzdx = 2 * ((cc + 2 * f + i) - (a + 2 * d + gg)) / 8, dzdy = 2 * ((gg + 2 * h + i) - (a + 2 * b + cc)) / 8;
+    const slope = Math.atan(Math.hypot(dzdx, dzdy));
+    let aspect = Math.atan2(dzdy, -dzdx);
+    if (aspect < 0) aspect += 2 * Math.PI;
+    out[y * W + x] = Math.max(0, cz * Math.cos(slope) + sz * Math.sin(slope) * Math.cos(az - aspect));
+  }
+  return (p.shade = out);
+}
+
+let lastDraw = null, drawId = 0;
+function drawPatch(p, rg, mask) {
+  lastDraw = [p, rg, mask];
+  const id = ++drawId;
+  const b = regionBox(rg);
+  const corners = [[b[0], b[1]], [b[2], b[1]], [b[0], b[3]], [b[2], b[3]]].map(([x, y]) => toLonLat(x, y));
+  const w = Math.min(...corners.map(c => c[0])), e = Math.max(...corners.map(c => c[0]));
+  const s = Math.min(...corners.map(c => c[1])), n = Math.max(...corners.map(c => c[1]));
+  // Up to 3 image pixels a metre so cell edges stay crisp, and at least 1
+  // (every cell its own pixel), but no more than ~3000 across.
+  const k = Math.max(Math.min(1, 3000 / Math.max(b[2] - b[0], b[3] - b[1])), Math.min(3, 1400 / Math.max(b[2] - b[0], b[3] - b[1])));
+  const PW = Math.ceil((b[2] - b[0]) * k), PH = Math.ceil((b[3] - b[1]) * k);
+  // Over a few hundred metres lon/lat to NZTM is linear to well under a
+  // centimetre, so the image's corners are projected and the rest
+  // interpolated, not every pixel projected.
+  const [nwx, nwy] = toNztm(w, n), [nex, ney] = toNztm(e, n), [swx, swy] = toNztm(w, s), [sex, sey] = toNztm(e, s);
+  const ground = look === 'ground', shade = ground ? hillshade(p) : null;
+  const cv = document.createElement('canvas'); cv.width = PW; cv.height = PH;
+  const ctx = cv.getContext('2d'), im = ctx.createImageData(PW, PH);
+  for (let r = 0; r < PH; r++) {
+    const v = (r + 0.5) / PH;
+    const lx = nwx + (swx - nwx) * v, ly = nwy + (swy - nwy) * v, rx = nex + (sex - nex) * v, ry = ney + (sey - ney) * v;
+    for (let c = 0; c < PW; c++) {
+      const u = (c + 0.5) / PW, x = lx + (rx - lx) * u, y = ly + (ry - ly) * u;
+      const i = cellAt(p, x, y);
+      if (i < 0 || !mask[i]) continue;
+      const o = (r * PW + c) * 4;
+      if (ground) {
+        const t = shade[i];
+        if (t !== t) { im.data[o] = 200; im.data[o + 1] = 120; im.data[o + 2] = 120; im.data[o + 3] = 120; continue; }
+        const g = Math.round(20 + 235 * t);
+        im.data[o] = g; im.data[o + 1] = g; im.data[o + 2] = g; im.data[o + 3] = 255;
+        continue;
+      }
+      const hv = p.h[i];
+      if (hv !== hv) { im.data[o] = 120; im.data[o + 1] = 120; im.data[o + 2] = 120; im.data[o + 3] = 90; continue; }
+      if (hv < 0.5) { im.data[o + 3] = 0; continue; }
+      const rgb = rampRgb(hv);
+      im.data[o] = rgb[0]; im.data[o + 1] = rgb[1]; im.data[o + 2] = rgb[2]; im.data[o + 3] = 200;
+    }
+  }
+  ctx.putImageData(im, 0, 0);
+  cv.toBlob(bl => {
+    if (id !== drawId) return; // a newer draw has started
+    if (overlay) map.removeLayer(overlay);
+    if (overlayUrl) URL.revokeObjectURL(overlayUrl);
+    overlayUrl = URL.createObjectURL(bl);
+    overlay = L.imageOverlay(overlayUrl, [[s, w], [n, e]], { pane: 'heights', opacity: ground ? 1 : look === 'topo' ? 0.7 : 0.85, interactive: false });
+    // Added in the middle of a zoom, an image lands in the wrong place.
+    const o = overlay;
+    if (map._animatingZoom) map.once('zoomend', () => { if (overlay === o) o.addTo(map); }); else o.addTo(map);
+  });
+}
+const ll = (x, y) => { const q = toLonLat(x, y); return [q[1], q[0]]; };
+
+/* ---------- UI ---------- */
+const $ = (id) => document.getElementById(id);
+const R_MIN = 10, R_MAX = 500;
+let radius = 100;
+try { const r = Number(localStorage.getItem('howtall.web.radius')); if (r >= R_MIN && r <= R_MAX) radius = r; } catch (e) {}
+$('radius').value = radius;
+const fmtHa = (m2) => { const ha = m2 / 1e4; return (ha < 10 ? ha.toFixed(1) : Math.round(ha)) + ' ha'; };
+const radiusText = () => radius + ' m · ' + fmtHa(Math.PI * radius * radius);
+$('radiusOut').textContent = radiusText();
+$('radius').addEventListener('input', (e) => { radius = Number(e.target.value); $('radiusOut').textContent = radiusText(); });
+$('radius').addEventListener('change', () => { try { localStorage.setItem('howtall.web.radius', radius); } catch (e) {} if (last && last.kind !== 'area') measure(last.lon, last.lat, last.kind, last.acc); });
+
+// Circle, or an area drawn on the map.
+let mode = 'circle';
+try { if (localStorage.getItem('howtall.web.mode') === 'area') mode = 'area'; } catch (e) {}
+function setMode(v) {
+  mode = v;
+  try { localStorage.setItem('howtall.web.mode', v); } catch (e) {}
+  document.querySelectorAll('.mode button').forEach(b => { const on = b.dataset.mode === mode; b.classList.toggle('on', on); b.setAttribute('aria-checked', String(on)); });
+  $('radiusRow').classList.toggle('show', mode === 'circle');
+  $('areaRow').classList.toggle('show', mode === 'area');
+  if (mode === 'circle') stopDrawing();
+  $('map').classList.toggle('drawing', mode === 'area');
+}
+document.querySelectorAll('.mode button').forEach(b => b.addEventListener('click', () => setMode(b.dataset.mode)));
+
+/* ---------- drawing an area ----------
+   Clicks put down corners; a dashed line follows the mouse. Double-click,
+   a click on the first corner, Enter or Finish closes it. */
+let drawPts = null; // [latlng, …] while drawing
+const drawLayer = L.layerGroup().addTo(map);
+let drawLine = null, drawGhost = null;
+const areaOf = (lls) => lls.length < 3 ? 0 : polyArea(lls.map(q => toNztm(q.lng, q.lat)));
+function redrawDraft(mouse) {
+  drawLayer.clearLayers();
+  if (!drawPts) return;
+  const pts = mouse ? [...drawPts, mouse] : drawPts;
+  if (pts.length >= 2) L.polygon(pts, { color: '#ff1f9e', weight: 2, dashArray: '5 5', fillOpacity: 0.08, interactive: false }).addTo(drawLayer);
+  drawPts.forEach((q, k) => L.circleMarker(q, { radius: k ? 4 : 6, color: '#ff1f9e', weight: 2, fillColor: '#fff', fillOpacity: 1, interactive: false }).addTo(drawLayer));
+  const a = window.proj4 ? areaOf(pts) : 0;
+  const live = $('areaLive');
+  live.textContent = drawPts.length + (drawPts.length === 1 ? ' corner' : ' corners') + (a ? ' · ' + fmtHa(a) : '') + (a > AREA_MAX_HA * 1e4 ? ' — over the ' + AREA_MAX_HA + ' ha limit' : '');
+  live.classList.toggle('over', a > AREA_MAX_HA * 1e4);
+  $('areaFinish').disabled = drawPts.length < 3;
+  $('areaUndo').disabled = !drawPts.length;
+}
+function startDrawing() {
+  drawPts = [];
+  map.doubleClickZoom.disable();
+  redrawDraft();
+}
+function stopDrawing() {
+  drawPts = null;
+  drawLayer.clearLayers();
+  map.doubleClickZoom.enable();
+  $('areaLive').textContent = '';
+  $('areaFinish').disabled = true; $('areaUndo').disabled = true;
+}
+function finishDrawing() {
+  if (!drawPts || drawPts.length < 3) return;
+  const pts = drawPts.map(q => toNztm(q.lng, q.lat));
+  const a = polyArea(pts), box = regionBox({ kind: 'poly', pts });
+  if (a > AREA_MAX_HA * 1e4) { $('areaLive').textContent = 'That\'s ' + fmtHa(a) + ': draw ' + AREA_MAX_HA + ' ha or less. Undo corners or Clear and start again.'; $('areaLive').classList.add('over'); return; }
+  if (box[2] - box[0] > BOX_MAX_M || box[3] - box[1] > BOX_MAX_M) { $('areaLive').textContent = 'Too long and thin: keep it within ' + (BOX_MAX_M / 1000) + ' km either way.'; $('areaLive').classList.add('over'); return; }
+  const lls = drawPts.slice();
+  stopDrawing();
+  measureArea(lls, pts);
+}
+map.on('mousemove', (e) => { if (drawPts && drawPts.length) redrawDraft(e.latlng); });
+$('areaFinish').addEventListener('click', finishDrawing);
+$('areaUndo').addEventListener('click', () => { if (drawPts) { drawPts.pop(); redrawDraft(); } });
+$('areaClear').addEventListener('click', () => { stopDrawing(); clearResult(); });
+map.on('dblclick', (e) => { if (mode === 'area' && drawPts) { L.DomEvent.stop(e); finishDrawing(); } });
+document.addEventListener('keydown', (e) => {
+  if (!drawPts || e.target.closest('input, textarea')) return;
+  if (e.key === 'Escape') stopDrawing();
+  else if (e.key === 'Enter') finishDrawing();
+  else if (e.key === 'Backspace') { e.preventDefault(); drawPts.pop(); redrawDraft(); }
+});
+document.querySelectorAll('.look button').forEach(b => b.addEventListener('click', () => setLook(b.dataset.look)));
+$('aboutBtn').addEventListener('click', () => $('about').showModal());
+$('aboutClose').addEventListener('click', () => $('about').close());
+// A caution on opening, until "Don't show this again" is ticked.
+const CAUTION_KEY = 'howtall.cautionSeen.v2'; // v2: new wording, shown once more to everyone
+$('cautionOk').addEventListener('click', () => {
+  if ($('cautionSkip').checked) { try { localStorage.setItem(CAUTION_KEY, '1'); } catch (e) {} }
+  $('caution').close();
+});
+try { if (!localStorage.getItem(CAUTION_KEY)) $('caution').showModal(); } catch (e) { $('caution').showModal(); }
+$('reBtn').addEventListener('click', () => $('re').showModal());
+$('reClose').addEventListener('click', () => $('re').close());
+// A tap on the dimmed backdrop closes either dialog.
+['about', 're'].forEach(id => $(id).addEventListener('click', (e) => { if (e.target === $(id)) $(id).close(); }));
+function syncPanelHeight() { document.documentElement.style.setProperty('--panel-h', (window.innerWidth < 640 ? $('panel').offsetHeight : 0) + 'px'); }
+new ResizeObserver(syncPanelHeight).observe($('panel'));
+
+const legendHtml = () => look === 'ground'
+  ? '<div class="ramp grey"></div><div class="ticks"><span>Bare ground under the trees, shaded as if lit from the north-west</span></div>'
+  : '<div class="ramp"></div><div class="ticks"><span>0</span><span>10</span><span>20</span><span>30</span><span>40+ m</span></div>';
+function syncLegend() { const el = document.querySelector('#result .legend'); if (el) el.innerHTML = legendHtml(); }
+
+function setStatus(msg, err) {
+  $('result').innerHTML = '<div class="status' + (err ? ' err' : '') + '">' + (err ? '' : '<span class="spin"></span>') + esc(msg) + '</div>';
+}
+
+let last = null;        // the last measurement asked for: { lon, lat, kind: 'tap' | 'gps', acc }
+let runId = 0;
+setLook(look);
+
+// A tap within TAP_PX of a tree (a dot or a labelled top) shows that tree's
+// height; anywhere else it measures a new circle.
+const TAP_PX = matchMedia('(pointer: coarse)').matches ? 22 : 12; // a finger, or a mouse
+function treeNear(pt) {
+  if (!lastTops || !topMarks || !map.hasLayer(topMarks)) return -1;
+  const [p, main, others] = lastTops;
+  let best = -1, bestD = TAP_PX * TAP_PX;
+  for (const i of new Set([main, ...others, ...dotsShown])) {
+    if (i < 0) continue;
+    const [u, w] = cellXY(p, i), q = map.latLngToContainerPoint(ll(u, w));
+    const d = (q.x - pt.x) ** 2 + (q.y - pt.y) ** 2;
+    if (d <= bestD) { best = i; bestD = d; }
+  }
+  return best;
+}
+function pickTree(i) {
+  const p = lastTops[0], [u, w] = cellXY(p, i);
+  tapTip.setLatLng(ll(u, w)).setContent(fmtM(p.h[i]) + ' m');
+  map.openTooltip(tapTip);
+  // The tree's own label gives way to the picked one; the tree picked
+  // before gets its label back.
+  if (pickedI !== i && labelMarks.has(pickedI)) labelMarks.get(pickedI).openTooltip();
+  pickedI = i;
+  if (labelMarks.has(i)) labelMarks.get(i).closeTooltip();
+}
+map.on('click', (e) => {
+  if (mode === 'area' && drawPts) {
+    // A click on the first corner closes the area.
+    if (drawPts.length >= 3) {
+      const f = map.latLngToContainerPoint(drawPts[0]);
+      if (f.distanceTo(e.containerPoint) < 12) { finishDrawing(); return; }
+    }
+    // The two clicks of a double-click put down one corner, not two.
+    const lastPt = drawPts[drawPts.length - 1];
+    if (lastPt && map.latLngToContainerPoint(lastPt).distanceTo(e.containerPoint) < 4) return;
+    drawPts.push(e.latlng); redrawDraft();
+    return;
+  }
+  const i = treeNear(e.containerPoint);
+  if (i >= 0) { pickTree(i); return; }
+  if (mode === 'area') { startDrawing(); drawPts.push(e.latlng); redrawDraft(); return; }
+  measure(e.latlng.lng, e.latlng.lat, 'tap');
+});
+
+// Where I am: a target button on the map, above the zoom buttons.
+const LocControl = L.Control.extend({
+  onAdd() {
+    const b = L.DomUtil.create('button', 'loc-btn');
+    b.id = 'locBtn'; b.type = 'button'; b.title = 'Where I am'; b.setAttribute('aria-label', 'Where I am');
+    b.innerHTML = icon('crosshair', { size: 22 });
+    L.DomEvent.disableClickPropagation(b);
+    L.DomEvent.on(b, 'click', findMe);
+    return b;
+  }
+});
+new LocControl({ position: 'bottomright' }).addTo(map);
+
+// When the phone's own Location (GPS) is switched off, browsers don't
+// always say so: some return an error, some wait until the timeout. So
+// after a few seconds with nothing, say what the likely cause is.
+const LOC_OFF = 'Your phone didn\'t give a location. Check Location (GPS) is turned on in your phone\'s settings, then press the target again. Or just tap the map.';
+let locId = 0;
+function findMe() {
+  if (!navigator.geolocation) { setStatus('This browser can\'t share its location. Tap the map instead.', true); return; }
+  const id = ++locId, btn = $('locBtn');
+  btn.classList.add('busy');
+  setStatus('Finding where you are…');
+  const slow = setTimeout(() => { if (id === locId) setStatus('Still waiting for your location… If Location (GPS) is off in your phone\'s settings, turn it on and press the target again.'); }, 7000);
+  const done = () => { clearTimeout(slow); btn.classList.remove('busy'); };
+  navigator.geolocation.getCurrentPosition(pos => {
+    if (id !== locId) return;
+    done();
+    const { longitude: lon, latitude: lat, accuracy } = pos.coords;
+    if (youMark) map.removeLayer(youMark);
+    youMark = L.layerGroup([
+      L.circle([lat, lon], { radius: accuracy, color: '#2a7fff', weight: 1, fillOpacity: 0.08, interactive: false }),
+      L.circleMarker([lat, lon], { radius: 7, color: '#fff', weight: 2, fillColor: '#2a7fff', fillOpacity: 1, interactive: false })
+    ]).addTo(map);
+    measure(lon, lat, 'gps', accuracy);
+  }, err => {
+    if (id !== locId) return;
+    done();
+    // 1: this site isn't allowed (on some phones also what Location being off looks like);
+    // 2: no position to be had, usually Location off; 3: timed out, ditto.
+    setStatus(err.code === 1
+      ? 'HowTall? isn\'t allowed to use your location. Allow it for this site in the browser (the icon by the address), and check Location (GPS) is on in your phone\'s settings. Or just tap the map.'
+      : LOC_OFF, true);
+  }, { enableHighAccuracy: true, timeout: 15000, maximumAge: 10000 });
+}
+map.on('click', () => { locId++; const b = document.getElementById('locBtn'); if (b) b.classList.remove('busy'); });
+
+// Bring the whole area into the part of the map the panel doesn't cover,
+// zooming in if it would be small.
+function fitArea(bounds) {
+  if (map._animatingZoom) { map.once('zoomend', () => fitArea(bounds)); return; }
+  const size = map.getSize(), wide = window.innerWidth >= 640;
+  const padTop = 64, padBottom = (wide ? 0 : $('panel').offsetHeight) + 12, padLeft = wide ? $('panel').offsetWidth + 24 : 12;
+  const nw = map.latLngToContainerPoint(bounds.getNorthWest()), se = map.latLngToContainerPoint(bounds.getSouthEast());
+  const fits = nw.x >= padLeft && nw.y >= padTop && se.x <= size.x - 8 && se.y <= size.y - padBottom;
+  const tooSmall = se.x - nw.x < (size.x - padLeft) * 0.35;
+  if (!fits || tooSmall) map.fitBounds(bounds, { paddingTopLeft: [padLeft, padTop], paddingBottomRight: [12, padBottom], maxZoom: 19, animate: false });
+}
+function clearResult() {
+  runId++;
+  last = null;
+  marks.clearLayers();
+  if (topMarks) { map.removeLayer(topMarks); topMarks = null; }
+  if (overlay) { map.removeLayer(overlay); overlay = null; }
+  lastDraw = null;
+  map.closeTooltip(tapTip);
+  lastTops = null; pickedI = -1; lastResult = null;
+  $('result').innerHTML = '';
+}
+
+// A circle round a clicked spot (or the GPS position).
+function measure(lon, lat, kind, acc) {
+  if (lon < NZ_BBOX[0] || lon > NZ_BBOX[2] || lat < NZ_BBOX[1] || lat > NZ_BBOX[3]) {
+    clearResult(); setStatus('No LiDAR here. HowTall? uses LINZ\'s LiDAR, which covers New Zealand only.', true); return;
+  }
+  // From GPS, at least as wide as the GPS could be out.
+  const reach = kind === 'gps' ? Math.min(R_MAX, Math.max(radius, Math.ceil(acc || 0))) : radius;
+  readRegion(() => {
+    const [x, y] = toNztm(lon, lat);
+    return { kind: 'circle', cx: x, cy: y, r: reach };
+  }, { lon, lat, kind, acc, reach }, L.latLng(lat, lon).toBounds(reach * 2.2));
+}
+// A drawn area: lls in lon/lat for the map, pts in NZTM.
+function measureArea(lls, pts) {
+  readRegion(() => ({ kind: 'poly', pts }), { kind: 'area', lls }, L.latLngBounds(lls).pad(0.05));
+}
+async function readRegion(makeRegion, info, bounds) {
+  clearResult();
+  const id = ++runId;
+  last = info;
+  fitArea(bounds);
+  if (info.kind === 'area') L.polygon(info.lls, { color: '#fff', weight: 1.5, dashArray: '4 4', fill: false, interactive: false }).addTo(marks);
+  else L.circleMarker([info.lat, info.lon], { radius: 4, color: '#fff', weight: 2, fillColor: '#111', fillOpacity: 1, interactive: false }).addTo(marks);
+  setStatus('Looking for LiDAR here…');
+  try {
+    await libs;
+    const rg = makeRegion(), box = regionBox(rg);
+    const surveys = await surveysFor(box);
+    if (id !== runId) return;
+    if (!surveys.length) { setStatus('No LINZ LiDAR survey covers this ' + (info.kind === 'area' ? 'area' : 'spot') + ' yet.', true); return; }
+    const p = await getPatch(surveys, box, rg, (m) => { if (id === runId) setStatus(m); }, () => id !== runId);
+    if (!p || id !== runId) return;
+    if (!p.used.length) { setStatus('The LiDAR stops just short of this ' + (info.kind === 'area' ? 'area' : 'spot') + ' (the edge of a survey).', true); return; }
+    await show(p, rg, info);
+  } catch (err) {
+    if (id !== runId) return;
+    setStatus('Couldn\'t read the LiDAR: ' + err.message + '. Check the connection and tap again.', true);
+  }
+}
+
+// The tallest tree (pink, always labelled) and the other tall tops
+// (green). A label that would sit on top of one already placed is left
+// off at this zoom, so only its dot shows; zooming in redraws them.
+let topMarks = null, lastTops = null, dotsShown = [];
+let labelMarks = new Map(), pickedI = -1; // labelled tops by cell; the tree tapped for its height
+const DOT_GAP_PX = 12; // dots closer than this on screen are thinned out
+// Every tree's dot is drawn on a canvas; taps on and near it are handled
+// by the map's click (treeNear), so a finger needn't hit the dot exactly.
+const dotRenderer = L.canvas({ padding: 0.5 });
+const tapTip = L.tooltip({ permanent: true, direction: 'top', offset: [0, -5], className: 'tree-label picked' });
+function drawTops(p, main, others, trees) {
+  lastTops = [p, main, others, trees];
+  if (topMarks) map.removeLayer(topMarks);
+  topMarks = L.layerGroup().addTo(map);
+  // Dots are thinned on screen: tallest first, a tree gets a dot only if
+  // it's at least DOT_GAP_PX from the dots already drawn, so a big circle
+  // zoomed out isn't a solid mass of dots. Zooming in shows more.
+  const shown = new Set([main, ...others]);
+  const taken = new Map(), cellPx = DOT_GAP_PX, key = (a, b) => a + ',' + b;
+  const free = (pt) => {
+    const gx = Math.floor(pt.x / cellPx), gy = Math.floor(pt.y / cellPx);
+    for (let a = gx - 1; a <= gx + 1; a++) for (let b = gy - 1; b <= gy + 1; b++)
+      for (const q of taken.get(key(a, b)) || []) if ((q.x - pt.x) ** 2 + (q.y - pt.y) ** 2 < DOT_GAP_PX * DOT_GAP_PX) return false;
+    return true;
+  };
+  const take = (pt) => { const k = key(Math.floor(pt.x / cellPx), Math.floor(pt.y / cellPx)); if (!taken.has(k)) taken.set(k, []); taken.get(k).push(pt); };
+  [main, ...others].forEach(i => { if (i >= 0) { const [u, w] = cellXY(p, i); take(map.latLngToContainerPoint(ll(u, w))); } });
+  dotsShown = [];
+  (trees || []).filter(i => !shown.has(i)).forEach(i => {
+    const [u, w] = cellXY(p, i), at = ll(u, w), pt = map.latLngToContainerPoint(at);
+    if (!free(pt)) return;
+    take(pt); dotsShown.push(i);
+    L.circleMarker(at, { renderer: dotRenderer, radius: 3.5, color: '#fff', weight: 1.5, fillColor: '#0a3f26', fillOpacity: 0.9, interactive: false })
+      .addTo(topMarks);
+  });
+  const placed = [];
+  const add = (i, isMain) => {
+    const [u, w] = cellXY(p, i), at = ll(u, w), pt = map.latLngToContainerPoint(at);
+    const m = L.circleMarker(at, { radius: isMain ? 6 : 4, color: '#fff', weight: 2, fillColor: isMain ? '#ff1f9e' : '#0a3f26', fillOpacity: 1, interactive: false });
+    if (isMain || placed.every(q => Math.abs(q.x - pt.x) > 56 || Math.abs(q.y - pt.y) > 24)) {
+      m.bindTooltip(fmtM(p.h[i], isMain ? 1 : 0) + ' m', { permanent: true, direction: 'top', offset: [0, -6], className: 'tree-label' + (isMain ? '' : ' other') });
+      placed.push(pt);
+      labelMarks.set(i, m);
+    }
+    m.addTo(topMarks);
+  };
+  labelMarks = new Map();
+  if (main >= 0) add(main, true);
+  others.forEach(i => add(i, false));
+  if (labelMarks.has(pickedI)) labelMarks.get(pickedI).closeTooltip();
+}
+map.on('zoomend', () => { if (lastTops && topMarks && map.hasLayer(topMarks)) drawTops(...lastTops); });
+
+let lastResult = null; // what the CSV download writes out
+const flownText = (s) => s.from && s.to && s.from !== s.to ? s.from + '–' + s.to : String(s.to || '');
+async function show(p, rg, info) {
+  const h = p.h, isArea = info.kind === 'area';
+  const mask = regionMask(rg, p.g);
+  setStatus('Finding trees…');
+  await new Promise(r => setTimeout(r, 0));
+  const t0 = performance.now();
+  const st = regionStats(p, mask);
+  if (last !== info) return; // a newer read has started
+  drawPatch(p, rg, mask);
+  // The tallest tree is the tallest real top in the area, not just its
+  // highest cell, which can be the flank of a bigger crown just outside.
+  const main = st.trees.length ? st.trees[0] : st.top;
+  if (!isArea) L.circle(ll(rg.cx, rg.cy), { radius: rg.r, color: '#fff', weight: 1.5, dashArray: '4 4', fill: false, interactive: false }).addTo(marks);
+  const tops = st.tops.filter(i => h[i] >= 5);
+  drawTops(p, main >= 0 && h[main] >= 0.5 ? main : -1, tops.filter(i => i !== main), st.standouts);
+  lastResult = { p, st, info };
+
+  const top = main >= 0 ? h[main] : NaN;
+  const ha = st.n / 1e4;
+  const where = isArea ? 'in the area drawn' : 'within ' + rg.r + ' m of ' + (info.kind === 'gps' ? 'you' : 'the click');
+  let html = '<div class="big"><span class="num">' + fmtM(top) + '</span><span class="unit">m</span><span class="what">' + esc(top >= 2 ? 'Tallest tree ' + where : 'Nothing tree-sized ' + where) + '</span></div>';
+  html += '<dl class="lines">';
+  if (!isArea) {
+    const atTap = topNear(p, rg.cx, rg.cy, TREE_REACH_M), i0 = cellAt(p, rg.cx, rg.cy);
+    const tapTop = atTap >= 0 ? h[atTap] : NaN;
+    html += '<dt>' + (info.kind === 'gps' ? 'Tree at your position' : 'Tree you clicked') + '</dt><dd>' + (tapTop >= 2 ? fmtM(tapTop) + ' m' : 'none (' + fmtM(h[i0]) + ' m)') + '</dd>';
+  }
+  html += '<dt>Area</dt><dd>' + fmtHa(st.n) + '</dd>' +
+    '<dt>Trees over 5 m</dt><dd>' + st.trees.length.toLocaleString() + (st.capped ? '+' : '') + (ha >= 0.5 ? ' (' + Math.round(st.trees.length / ha) + ' a hectare)' : '') + '</dd>' +
+    '<dt>Cover over 2 m</dt><dd>' + (st.nData ? Math.round(100 * st.over2 / st.nData) + '%' : '–') + '</dd>' +
+    '<dt>Mean canopy height</dt><dd>' + (st.over2 ? fmtM(st.mean2) + ' m' : '–') + '</dd>';
+  if (!isArea) { const i0 = cellAt(p, rg.cx, rg.cy); html += '<dt>Ground</dt><dd>' + fmtM(p.dem[i0], 0) + ' m above sea level</dd>'; }
+  html += '</dl>';
+  if (tops.length) {
+    html += '<div class="sub">Tallest ' + (tops.length > 1 ? tops.length + ' trees' : 'tree') + '</div><div class="toplist">' +
+      tops.map((i, k) => '<button type="button" data-tree="' + i + '"><span>' + (k + 1) + '</span><span>' + fmtM(h[i]) + ' m</span></button>').join('') + '</div>';
+  }
+  if (st.nData) {
+    const max = Math.max(...st.cls);
+    html += '<div class="sub">How much of the area is how tall</div><div class="classes">' + CLASSES.map((c, k) => {
+      const pct = 100 * st.cls[k] / st.nData, col = k === 0 ? 'var(--rule)' : 'rgb(' + rampRgb(Math.min(40, (c[0] + Math.min(c[1], 45)) / 2)).join(',') + ')';
+      return '<span>' + c[2] + '</span><span class="bar"><i style="width:' + (100 * st.cls[k] / max).toFixed(1) + '%;background:' + col + '"></i></span><span class="pct">' + (pct < 1 && pct > 0 ? '<1' : Math.round(pct)) + '%</span>';
+    }).join('') + '</div>';
+  }
+  if (info.kind === 'gps' && info.acc > radius) html += '<div class="survey">The circle is ' + rg.r + ' m because your GPS may be out by about ' + Math.round(info.acc) + ' m.</div>';
+  if (st.nData < st.n * 0.9) html += '<div class="survey">' + Math.round(100 * (1 - st.nData / st.n)) + '% of the area has no LiDAR height: the edge of the survey, water, or power lines left out.</div>';
+  if (st.capped) html += '<div class="survey">Only the ' + TREES_MAX.toLocaleString() + ' tallest trees are counted.</div>';
+  html += '<div class="legend">' + legendHtml() + '</div>';
+  // When each survey used was flown and whose it is (the full credit is on the map).
+  html += p.used.map((u, k) => '<div class="survey' + (p.used.length === 1 ? ' one' : '') + '" title="' + esc(u.survey.name) + '">LiDAR ' + flownText(u.survey) + ' · <span id="lic' + k + '">' + esc(u.survey.name) + '</span> · CC BY 4.0' +
+    (p.used.length > 1 ? ' · ' + Math.round(100 * u.cells / st.n) + '% of the area' : '') + (k === 0 && p.nWires >= 15 ? ' · power lines left out' : '') + '</div>').join('');
+  if (p.used.length > 1) html += '<div class="survey">Parts of this area come from different years\' surveys, so heights there aren\'t from the same date.</div>';
+  html += '<div class="dl"><button class="btn ghost" type="button" id="csvBtn"><span data-icon="download" data-icon-size="15"></span>Download trees (CSV)</button></div>';
+  $('result').innerHTML = html;
+  if (window.hydrateIcons) hydrateIcons($('result'));
+  $('result').querySelectorAll('[data-tree]').forEach(b => b.addEventListener('click', () => {
+    const i = Number(b.dataset.tree), [u, w] = cellXY(p, i);
+    map.setView(ll(u, w), Math.max(map.getZoom(), 18));
+    pickTree(i);
+  }));
+  $('csvBtn').addEventListener('click', downloadCsv);
+  console.log('HowTall? web: ' + st.trees.length + ' trees, ' + st.n + ' cells, stats ' + Math.round(performance.now() - t0) + ' ms');
+  // Credit each survey's own licensor, in the panel and on the map.
+  Promise.all(p.used.map(u => licensors(u.survey))).then(all => {
+    if (!lastTops || lastTops[0] !== p) return;
+    all.forEach((names, k) => { if (names && $('lic' + k)) $('lic' + k).textContent = '© ' + names.join(', '); });
+    const names = [...new Set(all.flat().filter(Boolean))];
+    if (names.length) setLidarCredit('LiDAR © ' + names.join(', ') + ', CC BY 4.0, via Toitū Te Whenua LINZ');
+  });
+}
+
+// Every tree over 5 m in the area, tallest first.
+function downloadCsv() {
+  if (!lastResult) return;
+  const { p, st } = lastResult;
+  const rows = [['tree', 'height_m', 'ground_m', 'stands_out', 'nztm_x', 'nztm_y', 'latitude', 'longitude', 'survey', 'flown']];
+  const out = new Set(st.standouts);
+  st.trees.forEach((i, k) => {
+    const [x, y] = cellXY(p, i), [lon, lat] = toLonLat(x, y), s = p.used[p.src[i]] ? p.used[p.src[i]].survey : p.survey;
+    rows.push([k + 1, p.h[i].toFixed(1), p.dem[i].toFixed(1), out.has(i) ? 'yes' : 'no', x.toFixed(1), y.toFixed(1), lat.toFixed(7), lon.toFixed(7), s.name, flownText(s)]);
+  });
+  const csv = rows.map(r => r.map(v => /[",\n]/.test(String(v)) ? '"' + String(v).replace(/"/g, '""') + '"' : v).join(',')).join('\r\n');
+  const a = document.createElement('a');
+  a.href = URL.createObjectURL(new Blob([csv], { type: 'text/csv' }));
+  a.download = 'howtall-trees-' + new Date().toISOString().slice(0, 10) + '.csv';
+  document.body.appendChild(a); a.click(); a.remove();
+  setTimeout(() => URL.revokeObjectURL(a.href), 1000);
+}
+setMode(mode);
+</script>
+</body>
+</html>
