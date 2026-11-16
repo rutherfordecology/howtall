@@ -1,5 +1,11 @@
 # Changelog
 
+## 0.18.0 — 2026-11-16
+
+- HowTall? web: downloads as KML as well as CSV, picked with a CSV | KML switch by the download buttons (kept for next time). It applies to All trees, Tall trees only and Marked trees.
+- In the KML each tree is a point with every CSV column kept as its data. Marked trees are pink rings labelled with their name; trees at or over the pink height are pink; the rest are dark green and unlabelled, so a big area isn't buried in labels. The area read (circle or drawn) comes as an outline. Opens in Google Earth, QGIS, ArcGIS and GPS apps.
+- The download buttons drop "(CSV)" from their names.
+
 ## 0.17.1 — 2026-11-16
 
 - HowTall? web: the Pink from slider had its pink on the wrong side (below the handle). Its track is now muted green below the handle and pink above it, as the map colours trees.
