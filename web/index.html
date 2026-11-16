@@ -122,6 +122,12 @@ button.bmc { border: 0; background: none; font-family: var(--font); cursor: poin
 .look button { min-height: 38px; padding: 0 12px; }
 
 #map.ground { background: #e9e7e2; }
+.legend .ramp.tall { background: linear-gradient(90deg, #e3dfcc 0%, #9aae85 42%, #2f4a32 84%, #ff1f9e 84%, #ff1f9e 100%); }
+.legend .scheme { margin-bottom: 6px; }
+.legend .scheme button { flex: 1; min-height: 32px; font-size: 13px; }
+.pink-row { display: flex; align-items: center; gap: 8px; font-size: 13px; padding-top: 6px; }
+.pink-row input { flex: 1; accent-color: var(--pin); }
+.pink-auto:disabled { opacity: 0.45; cursor: default; }
 .legend .ramp.grey { background: linear-gradient(90deg, #282828, #f5f5f5); }
 .legend .ticks span:only-child { white-space: normal; }
 .seg button { border: 0; background: var(--bg); color: var(--text); font: 600 14px var(--font); padding: 0 14px; min-height: 44px; cursor: pointer; }
@@ -256,7 +262,8 @@ dialog::backdrop { background: rgba(0,0,0,0.45); }
     <h3>Circle or drawn area</h3>
     <p><strong>Circle</strong>: click the map and HowTall? reads a circle round the spot, 10 to 500 m radius (up to about 78 ha). <strong>Draw an area</strong>: click round a block to put down its corners, up to 100 ha, and finish with a double-click or by clicking the first corner.</p>
     <p>You get the tallest tree, the number of separate trees over 5 m, the ten tallest (click one to go to it), how much of the area is in each height class, and its mean canopy height. The tallest tree is marked pink, the other tall tops green, and trees that stand out get a small dot: one that rises at least 3 m (or a tenth of its height) above the canopy round it, like an emergent over the forest or a lone tree in a paddock. Click a dot to see its height. Two tops count as separate trees only if the canopy dips between them by at least 2 m, or a quarter of the shorter tree's height, so the bumps on one broad crown count once.</p>
-    <p><strong>Download trees (CSV)</strong> gives every tree over 5 m in the area: its height, the ground under it, and where it is (NZTM and latitude/longitude). The tree count is from the LiDAR's crown tops, so trees under a taller canopy are missed and a big spreading crown can count as two.</p>
+    <p><strong>Tall trees pink</strong>, under the result, colours the tallest of the canopy pink and the rest in muted greens, so the tall trees jump out (as inferrd's Emergents). Pink starts at the tallest 10% of the cover over 2 m; the slider sets your own height, which then holds for every area until Auto.</p>
+    <p><strong>All trees (CSV)</strong> gives every tree over 5 m in the area; <strong>Tall trees only (CSV)</strong> only those at or over the pink height. Each row has the tree's height, how far it rises above the canopy round it, the ground under it, and where it is: NZTM2000 easting and northing (EPSG:2193, the middle of the 1 m cell holding its top) and latitude/longitude. The tree count is from the LiDAR's crown tops, so trees under a taller canopy are missed and a big spreading crown can count as two.</p>
     <p>Where an area is covered by more than one survey, the newest is used, and the gaps it leaves are filled from older ones; the line under the result names each survey used.</p>
     <h3>Aerial, Ground and Topo</h3>
     <p><strong>Aerial</strong> shows the photo with tree heights coloured over it. <strong>Ground</strong> takes away the photo and the trees: inside the circle it shows the bare earth from the LiDAR's ground model at 1 m, shaded as if lit from the north-west, so tracks, streams, slips and old earthworks under the canopy show up. Outside the circle is Esri's much coarser world hillshade, for context. <strong>Topo</strong> is LINZ's NZ Topo50 map (contours, tracks, huts) with the tree heights coloured over it; zoomed well out it's OpenTopoMap.</p>
@@ -276,7 +283,7 @@ dialog::backdrop { background: rgba(0,0,0,0.45); }
 <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
 <script src="../icons.js"></script>
 <script>
-const VERSION = '0.15.0';
+const VERSION = '0.16.0';
 document.getElementById('ver').textContent = 'v' + VERSION;
 document.getElementById('aboutVer').textContent = 'Version ' + VERSION;
 
@@ -656,6 +663,7 @@ function regionStats(p, inC) {
   const { W, H } = p.g, h = p.h;
   let n = 0, nData = 0, over2 = 0, sum2 = 0, top = -1;
   const cls = CLASSES.map(() => 0);
+  const fine = new Uint32Array(1001); // cells by height, 0.1 m bins to 100 m: for the pink cut-off
   for (let i = 0; i < W * H; i++) {
     if (!inC[i]) continue;
     n++;
@@ -664,6 +672,7 @@ function regionStats(p, inC) {
     nData++;
     if (v >= 2) { over2++; sum2 += v; }
     let k = 0; while (v >= CLASSES[k][1]) k++; cls[k]++;
+    fine[Math.min(1000, Math.floor(v * 10))]++;
     if (top < 0 || v > h[top]) top = i;
   }
   const peaks = [];
@@ -729,7 +738,8 @@ function regionStats(p, inC) {
     if (d2 >= rIn * rIn && d2 <= rOut * rOut) ringOff.push([dx, dy]);
   }
   const buf = new Float32Array(ringOff.length);
-  const standouts = trees.filter(i => {
+  const rise = new Float32Array(trees.length); // how far each tree rises above the canopy round it
+  const standouts = trees.filter((i, k) => {
     const r0 = Math.floor(i / W), c0 = i % W;
     let n = 0;
     for (const [dx, dy] of ringOff) {
@@ -738,9 +748,10 @@ function regionStats(p, inC) {
       const v = h[r * W + c];
       buf[n++] = v === v ? Math.max(0, v) : 0;   // no data (water, a gap) counts as open
     }
-    if (!n) return true;
+    if (!n) { rise[k] = h[i]; return true; }
     const ring = buf.subarray(0, n).sort();
     const level = ring[Math.floor(n * 0.95)];
+    rise[k] = h[i] - level;
     return h[i] - level >= Math.max(STANDOUT_M, STANDOUT_FRAC * h[i]);
   });
   // The ten labelled tops: the tallest trees, at least 6 m apart so the
@@ -751,7 +762,7 @@ function regionStats(p, inC) {
     if (tops.every(j => { const [u, w] = cellXY(p, j); return (u - x) ** 2 + (w - y) ** 2 >= 36; })) tops.push(i);
     if (tops.length >= 10) break;
   }
-  return { n, nData, over2, mean2: over2 ? sum2 / over2 : NaN, top, tops, trees, standouts, cls, capped: trees.length >= TREES_MAX };
+  return { n, nData, over2, mean2: over2 ? sum2 / over2 : NaN, top, tops, trees, rise, standouts, cls, fine, capped: trees.length >= TREES_MAX };
 }
 
 /* ---------- map ---------- */
@@ -807,11 +818,37 @@ let overlay = null, overlayUrl = null, youMark = null;
 // north away from 173°E).
 // Viridis, purple (low) to yellow (tall): stands out on green canopy.
 const RAMP = [[0, '#440154'], [10, '#3b528b'], [20, '#21918c'], [30, '#5ec962'], [40, '#fde725']].map(([v, c]) => [v, [1, 3, 5].map(k => parseInt(c.slice(k, k + 2), 16))]);
-function rampRgb(v) {
+function rampRgb(v, ramp = RAMP) {
   let j = 0;
-  while (j < RAMP.length - 2 && v > RAMP[j + 1][0]) j++;
-  const t = Math.min(1, Math.max(0, (v - RAMP[j][0]) / (RAMP[j + 1][0] - RAMP[j][0])));
-  return RAMP[j][1].map((a, q) => Math.round(a + (RAMP[j + 1][1][q] - a) * t));
+  while (j < ramp.length - 2 && v > ramp[j + 1][0]) j++;
+  const t = Math.min(1, Math.max(0, (v - ramp[j][0]) / (ramp[j + 1][0] - ramp[j][0])));
+  return ramp[j][1].map((a, q) => Math.round(a + (ramp[j + 1][1][q] - a) * t));
+}
+// Tall trees pink (inferrd's "Emergents"): a muted ramp up to a cut-off
+// height, as a share of it, and everything at or over it pink. The
+// cut-off is the tallest 10% of the cover over 2 m until the slider moves.
+const MUTED = [[0, '#e3dfcc'], [0.5, '#9aae85'], [1, '#2f4a32']].map(([v, c]) => [v, [1, 3, 5].map(k => parseInt(c.slice(k, k + 2), 16))]);
+const PINK = [255, 31, 158];
+let scheme = 'heights', pinkM = null; // pinkM null: automatic
+try { if (localStorage.getItem('howtall.web.scheme') === 'tall') scheme = 'tall'; } catch (e) {}
+// The cut-off for an area's height histogram: { from, auto, cells, woody }.
+function pinkCut(fine) {
+  let woody = 0;
+  for (let k = 20; k < fine.length; k++) woody += fine[k];
+  let from = pinkM;
+  if (from === null) {
+    from = Infinity;
+    let acc = 0;
+    for (let k = fine.length - 1; k >= 20 && woody; k--) { acc += fine[k]; if (acc >= 0.1 * woody) { from = k / 10; break; } }
+  }
+  let cells = 0;
+  for (let k = Math.round(from * 10); k < fine.length; k++) cells += fine[k];
+  return { from, auto: pinkM === null, cells, woody };
+}
+function heightRgb(v, cut) {
+  if (scheme !== 'tall') return rampRgb(v);
+  if (v >= cut) return PINK;
+  return rampRgb(Math.min(1, v / cut), MUTED);
 }
 // Bare-ground hillshade (Horn's method), light from the north-west at
 // 45°, 0–1, worked out once per patch.
@@ -836,8 +873,9 @@ function hillshade(p) {
 }
 
 let lastDraw = null, drawId = 0;
-function drawPatch(p, rg, mask) {
-  lastDraw = [p, rg, mask];
+function drawPatch(p, rg, mask, fine) {
+  lastDraw = [p, rg, mask, fine];
+  const cut = fine ? pinkCut(fine).from : Infinity;
   const id = ++drawId;
   const b = regionBox(rg);
   const corners = [[b[0], b[1]], [b[2], b[1]], [b[0], b[3]], [b[2], b[3]]].map(([x, y]) => toLonLat(x, y));
@@ -872,8 +910,8 @@ function drawPatch(p, rg, mask) {
       const hv = p.h[i];
       if (hv !== hv) { im.data[o] = 120; im.data[o + 1] = 120; im.data[o + 2] = 120; im.data[o + 3] = 90; continue; }
       if (hv < 0.5) { im.data[o + 3] = 0; continue; }
-      const rgb = rampRgb(hv);
-      im.data[o] = rgb[0]; im.data[o + 1] = rgb[1]; im.data[o + 2] = rgb[2]; im.data[o + 3] = 200;
+      const rgb = heightRgb(hv, cut);
+      im.data[o] = rgb[0]; im.data[o + 1] = rgb[1]; im.data[o + 2] = rgb[2]; im.data[o + 3] = rgb === PINK ? 245 : 200;
     }
   }
   ctx.putImageData(im, 0, 0);
@@ -986,10 +1024,50 @@ $('reClose').addEventListener('click', () => $('re').close());
 function syncPanelHeight() { document.documentElement.style.setProperty('--panel-h', (window.innerWidth < 640 ? $('panel').offsetHeight : 0) + 'px'); }
 new ResizeObserver(syncPanelHeight).observe($('panel'));
 
-const legendHtml = () => look === 'ground'
-  ? '<div class="ramp grey"></div><div class="ticks"><span>Bare ground under the trees, shaded as if lit from the north-west</span></div>'
-  : '<div class="ramp"></div><div class="ticks"><span>0</span><span>10</span><span>20</span><span>30</span><span>40+ m</span></div>';
+// The legend, with the colour switch (heights, or tall trees pink) and,
+// for tall trees, the slider for the height pink starts at.
+function pinkText(c) {
+  const st = lastResult && lastResult.st, h = lastResult && lastResult.p.h;
+  const nTrees = st && isFinite(c.from) ? st.trees.filter(i => h[i] >= c.from).length : 0;
+  if (!isFinite(c.from)) return 'Nothing over 2 m here to pick out.';
+  return 'Pink: ' + (c.auto ? 'the tallest 10% of the cover over 2 m, ' : '') + fmtM(c.from) + ' m and over' +
+    ' · ' + nTrees.toLocaleString() + (nTrees === 1 ? ' tree reaches' : ' trees reach') + ' it, ' + (c.woody ? (c.cells && c.cells < c.woody / 100 ? '<1' : Math.round(100 * c.cells / c.woody)) : 0) + '% of the cover over 2 m';
+}
+function legendHtml() {
+  if (look === 'ground') return '<div class="ramp grey"></div><div class="ticks"><span>Bare ground under the trees, shaded as if lit from the north-west</span></div>';
+  const sw = '<div class="seg scheme" role="radiogroup" aria-label="Colours">' +
+    '<button type="button" role="radio" data-scheme="heights" class="' + (scheme === 'heights' ? 'on' : '') + '" aria-checked="' + (scheme === 'heights') + '">Heights</button>' +
+    '<button type="button" role="radio" data-scheme="tall" class="' + (scheme === 'tall' ? 'on' : '') + '" aria-checked="' + (scheme === 'tall') + '">Tall trees pink</button></div>';
+  if (scheme !== 'tall') return sw + '<div class="ramp"></div><div class="ticks"><span>0</span><span>10</span><span>20</span><span>30</span><span>40+ m</span></div>';
+  const fine = lastResult && lastResult.st.fine;
+  const c = fine ? pinkCut(fine) : { from: Infinity, auto: true, cells: 0, woody: 0 };
+  const top = lastResult && lastResult.st.trees.length ? lastResult.p.h[lastResult.st.trees[0]] : 60;
+  const max = Math.max(3, Math.ceil(top)), val = isFinite(c.from) ? Math.min(max, c.from) : max;
+  return sw + '<div class="ramp tall"></div><div class="ticks"><span>0</span><span>' + (isFinite(c.from) ? fmtM(c.from) + ' m +' : '') + '</span></div>' +
+    '<div class="pink-row"><label for="pinkSlider">Pink from</label><input type="range" id="pinkSlider" min="2" max="' + max + '" step="0.5" value="' + val + '">' +
+    '<button type="button" class="bmc pink-auto" id="pinkAuto"' + (c.auto ? ' disabled' : '') + '>Auto</button></div>' +
+    '<div class="survey" id="pinkText">' + esc(pinkText(c)) + '</div>';
+}
 function syncLegend() { const el = document.querySelector('#result .legend'); if (el) el.innerHTML = legendHtml(); }
+function redrawColours() { if (lastDraw) drawPatch(...lastDraw); }
+let pinkTimer = 0;
+$('result').addEventListener('click', (e) => {
+  const b = e.target.closest('[data-scheme]');
+  if (b) {
+    scheme = b.dataset.scheme;
+    try { localStorage.setItem('howtall.web.scheme', scheme); } catch (er) {}
+    syncLegend(); redrawColours(); return;
+  }
+  if (e.target.closest('#pinkAuto')) { pinkM = null; syncLegend(); redrawColours(); }
+});
+$('result').addEventListener('input', (e) => {
+  if (e.target.id !== 'pinkSlider') return;
+  pinkM = Number(e.target.value);
+  if (lastResult) $('pinkText').textContent = pinkText(pinkCut(lastResult.st.fine));
+  $('pinkAuto').disabled = false;
+  clearTimeout(pinkTimer); pinkTimer = setTimeout(redrawColours, 120);
+});
+$('result').addEventListener('change', (e) => { if (e.target.id === 'pinkSlider') syncLegend(); });
 
 function setStatus(msg, err) {
   $('result').innerHTML = '<div class="status' + (err ? ' err' : '') + '">' + (err ? '' : '<span class="spin"></span>') + esc(msg) + '</div>';
@@ -1216,7 +1294,7 @@ async function show(p, rg, info) {
   const t0 = performance.now();
   const st = regionStats(p, mask);
   if (last !== info) return; // a newer read has started
-  drawPatch(p, rg, mask);
+  drawPatch(p, rg, mask, st.fine);
   // The tallest tree is the tallest real top in the area, not just its
   // highest cell, which can be the flank of a bigger crown just outside.
   const main = st.trees.length ? st.trees[0] : st.top;
@@ -1260,7 +1338,8 @@ async function show(p, rg, info) {
   html += p.used.map((u, k) => '<div class="survey' + (p.used.length === 1 ? ' one' : '') + '" title="' + esc(u.survey.name) + '">LiDAR ' + flownText(u.survey) + ' · <span id="lic' + k + '">' + esc(u.survey.name) + '</span> · CC BY 4.0' +
     (p.used.length > 1 ? ' · ' + Math.round(100 * u.cells / st.n) + '% of the area' : '') + (k === 0 && p.nWires >= 15 ? ' · power lines left out' : '') + '</div>').join('');
   if (p.used.length > 1) html += '<div class="survey">Parts of this area come from different years\' surveys, so heights there aren\'t from the same date.</div>';
-  html += '<div class="dl"><button class="btn ghost" type="button" id="csvBtn"><span data-icon="download" data-icon-size="15"></span>Download trees (CSV)</button></div>';
+  html += '<div class="dl"><button class="btn ghost" type="button" id="csvBtn"><span data-icon="download" data-icon-size="15"></span>All trees (CSV)</button>' +
+    '<button class="btn ghost" type="button" id="csvPinkBtn" title="Only the trees as tall as the pink cut-off or taller"><span data-icon="download" data-icon-size="15"></span>Tall trees only (CSV)</button></div>';
   $('result').innerHTML = html;
   if (window.hydrateIcons) hydrateIcons($('result'));
   $('result').querySelectorAll('[data-tree]').forEach(b => b.addEventListener('click', () => {
@@ -1268,7 +1347,8 @@ async function show(p, rg, info) {
     map.setView(ll(u, w), Math.max(map.getZoom(), 18));
     pickTree(i);
   }));
-  $('csvBtn').addEventListener('click', downloadCsv);
+  $('csvBtn').addEventListener('click', () => downloadCsv(false));
+  $('csvPinkBtn').addEventListener('click', () => downloadCsv(true));
   console.log('HowTall? web: ' + st.trees.length + ' trees, ' + st.n + ' cells, stats ' + Math.round(performance.now() - t0) + ' ms');
   // Credit each survey's own licensor, in the panel and on the map.
   Promise.all(p.used.map(u => licensors(u.survey))).then(all => {
@@ -1279,20 +1359,27 @@ async function show(p, rg, info) {
   });
 }
 
-// Every tree over 5 m in the area, tallest first.
-function downloadCsv() {
+// Every tree over 5 m in the area, tallest first; or only those at or
+// over the pink cut-off. Where each is: NZTM2000 easting and northing
+// (EPSG:2193, the middle of the 1 m cell holding its top), and latitude
+// and longitude (WGS84).
+function downloadCsv(pinkOnly) {
   if (!lastResult) return;
   const { p, st } = lastResult;
-  const rows = [['tree', 'height_m', 'ground_m', 'stands_out', 'nztm_x', 'nztm_y', 'latitude', 'longitude', 'survey', 'flown']];
+  const cut = pinkOnly ? pinkCut(st.fine).from : 0;
+  const rows = [['tree', 'height_m', 'rises_above_canopy_m', 'stands_out', 'ground_m', 'nztm2000_easting', 'nztm2000_northing', 'latitude', 'longitude', 'survey', 'flown']];
   const out = new Set(st.standouts);
   st.trees.forEach((i, k) => {
+    if (p.h[i] < cut) return;
     const [x, y] = cellXY(p, i), [lon, lat] = toLonLat(x, y), s = p.used[p.src[i]] ? p.used[p.src[i]].survey : p.survey;
-    rows.push([k + 1, p.h[i].toFixed(1), p.dem[i].toFixed(1), out.has(i) ? 'yes' : 'no', x.toFixed(1), y.toFixed(1), lat.toFixed(7), lon.toFixed(7), s.name, flownText(s)]);
+    rows.push([k + 1, p.h[i].toFixed(1), Math.max(0, st.rise[k]).toFixed(1), out.has(i) ? 'yes' : 'no', p.dem[i].toFixed(1), x.toFixed(1), y.toFixed(1), lat.toFixed(7), lon.toFixed(7), s.name, flownText(s)]);
   });
+  if (pinkOnly && rows.length === 1) { alert('No trees reach the pink cut-off here.'); return; }
   const csv = rows.map(r => r.map(v => /[",\n]/.test(String(v)) ? '"' + String(v).replace(/"/g, '""') + '"' : v).join(',')).join('\r\n');
   const a = document.createElement('a');
-  a.href = URL.createObjectURL(new Blob([csv], { type: 'text/csv' }));
-  a.download = 'howtall-trees-' + new Date().toISOString().slice(0, 10) + '.csv';
+  // The byte-order mark lets Excel read macrons and dashes in survey names.
+  a.href = URL.createObjectURL(new Blob(['﻿' + csv], { type: 'text/csv;charset=utf-8' }));
+  a.download = 'howtall-' + (pinkOnly ? 'tall-trees-' + fmtM(cut) + 'm-' : 'trees-') + new Date().toISOString().slice(0, 10) + '.csv';
   document.body.appendChild(a); a.click(); a.remove();
   setTimeout(() => URL.revokeObjectURL(a.href), 1000);
 }

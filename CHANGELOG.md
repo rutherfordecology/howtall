@@ -1,5 +1,11 @@
 # Changelog
 
+## 0.16.0 — 2026-11-16
+
+- HowTall? web: Tall trees pink, as inferrd's Emergents. Under the result, switch the colours from Heights to Tall trees pink: the canopy is muted greens up to a cut-off height and pink at or over it. The cut-off starts at the tallest 10% of the cover over 2 m; a slider sets your own (then kept for every area until Auto). It says how many trees reach it.
+- The tree download is now two buttons: All trees (CSV), and Tall trees only (CSV) for those at or over the pink height.
+- The CSV gives NZTM2000 easting and northing (EPSG:2193), named as such, beside latitude and longitude, and a new column for how far each tree rises above the canopy round it. It opens in Excel with macrons and dashes intact.
+
 ## 0.15.0 — 2026-11-16
 
 - New: HowTall? web, at /web/, for a computer. It reads a whole block, not just a tap: a circle of 10 to 500 m radius (up to about 78 ha), or an area you draw by clicking its corners, up to 100 ha. Double-click or click the first corner to finish; Backspace takes a corner off, Esc stops.
