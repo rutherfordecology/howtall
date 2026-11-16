@@ -241,7 +241,7 @@ dialog::backdrop { background: rgba(0,0,0,0.45); }
 <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
 <script src="icons.js"></script>
 <script>
-const VERSION = '0.14.2';
+const VERSION = '0.14.3';
 document.getElementById('ver').textContent = 'v' + VERSION;
 document.getElementById('aboutVer').textContent = 'Version ' + VERSION;
 
@@ -815,6 +815,11 @@ map.on('click', (e) => {
     const p = lastTops[0], [u, w] = cellXY(p, i);
     tapTip.setLatLng(ll(u, w)).setContent(fmtM(p.h[i]) + ' m');
     map.openTooltip(tapTip);
+    // The tapped tree's own label gives way to the picked one; the tree
+    // tapped before gets its label back.
+    if (pickedI !== i && labelMarks.has(pickedI)) labelMarks.get(pickedI).openTooltip();
+    pickedI = i;
+    if (labelMarks.has(i)) labelMarks.get(i).closeTooltip();
     return;
   }
   measure(e.latlng.lng, e.latlng.lat, 'tap');
@@ -886,7 +891,7 @@ async function measure(lon, lat, kind, acc) {
   marks.clearLayers();
   if (topMarks) { map.removeLayer(topMarks); topMarks = null; }
   map.closeTooltip(tapTip);
-  lastTops = null;
+  lastTops = null; pickedI = -1;
   if (lon < NZ_BBOX[0] || lon > NZ_BBOX[2] || lat < NZ_BBOX[1] || lat > NZ_BBOX[3]) {
     setStatus('No LiDAR here. HowTall? uses LINZ\'s LiDAR, which covers New Zealand only.', true); return;
   }
@@ -924,6 +929,7 @@ async function measure(lon, lat, kind, acc) {
 // (green). A label that would sit on top of one already placed is left
 // off at this zoom, so only its dot shows; zooming in redraws them.
 let topMarks = null, lastTops = null, dotsShown = [];
+let labelMarks = new Map(), pickedI = -1; // labelled tops by cell; the tree tapped for its height
 const DOT_GAP_PX = 12; // dots closer than this on screen are thinned out
 // Every tree's dot is drawn on a canvas; taps on and near it are handled
 // by the map's click (treeNear), so a finger needn't hit the dot exactly.
@@ -961,11 +967,14 @@ function drawTops(p, main, others, trees) {
     if (isMain || placed.every(q => Math.abs(q.x - pt.x) > 56 || Math.abs(q.y - pt.y) > 24)) {
       m.bindTooltip(fmtM(p.h[i], isMain ? 1 : 0) + ' m', { permanent: true, direction: 'top', offset: [0, -6], className: 'tree-label' + (isMain ? '' : ' other') });
       placed.push(pt);
+      labelMarks.set(i, m);
     }
     m.addTo(topMarks);
   };
+  labelMarks = new Map();
   if (main >= 0) add(main, true);
   others.forEach(i => add(i, false));
+  if (labelMarks.has(pickedI)) labelMarks.get(pickedI).closeTooltip();
 }
 map.on('zoomend', () => { if (lastTops && topMarks && map.hasLayer(topMarks)) drawTops(...lastTops); });
 

@@ -1,5 +1,9 @@
 # Changelog
 
+## 0.14.3 — 2026-11-16
+
+- Tapping a labelled tree shows its more exact height in place of its old label, rather than on top of it. Tapping another tree puts the first one's label back.
+
 ## 0.14.2 — 2026-11-15
 
 - Opening box: the body text is a size smaller (13 px, was 14 px).
